@@ -15,6 +15,14 @@ struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
+UENUM(BlueprintType)
+enum class EMovementStance : uint8
+{
+	Crouch UMETA(DisplayName = "Crouch"),
+	Walk   UMETA(DisplayName = "Walk"),
+	Sprint UMETA(DisplayName = "Sprint")
+};
+
 UCLASS(config=Game)
 class AStealthCharacter : public ACharacter
 {
@@ -55,6 +63,24 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	/** Movement speed for each stance */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float Speed_Crouch = 180.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float Speed_Walk = 380.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float Speed_Sprint = 650.f;
+
+	/** Current movement stance */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Movement")
+	EMovementStance CurrentStance = EMovementStance::Walk;
+
+	void SetStance(EMovementStance NewStance);
+
+	void ApplyStanceSpeed();
 			
 
 protected:

@@ -34,7 +34,7 @@ AStealthCharacter::AStealthCharacter()
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 380.f;
+	GetCharacterMovement()->MaxWalkSpeed = Speed_Walk;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -131,6 +131,40 @@ void AStealthCharacter::Look(const FInputActionValue& Value)
 void AStealthCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(LogTemp, Warning, TEXT("StealthCharacter BeginPlay - build check"));
 
+	SetStance(EMovementStance::Sprint);
+	SetStance(EMovementStance::Walk);
+	SetStance(EMovementStance::Walk);
+}
+
+void AStealthCharacter::ApplyStanceSpeed()
+{
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	if (!Move) { return; }
+
+	switch (CurrentStance)
+	{
+	case EMovementStance::Crouch:
+		Move->MaxWalkSpeed = Speed_Crouch;
+		break;
+
+	case EMovementStance::Walk:
+		Move->MaxWalkSpeed = Speed_Walk;
+		break;
+
+	case EMovementStance::Sprint:
+		Move->MaxWalkSpeed = Speed_Sprint;
+		break;
+	}
+}
+
+void AStealthCharacter::SetStance(EMovementStance NewStance)
+{
+	if (CurrentStance == NewStance) { return; }
+
+	CurrentStance = NewStance;
+	ApplyStanceSpeed();
+
+	UE_LOG(LogTemp, Warning, TEXT("Stance -> %s"),
+		*UEnum::GetValueAsString(CurrentStance));
 }
