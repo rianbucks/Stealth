@@ -64,6 +64,19 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
+	/** Toggles between Crouch and Walk */
+	void OnCrouchToggle();
+
+	/** Enters Sprint stance */
+	void OnSprintStart();
+
+	/** Returns to Walk when sprint key is released */
+	void OnSprintEnd();
+
+	void SetStance(EMovementStance NewStance);
+
+	void ApplyStanceSpeed();
+
 	/** Movement speed for each stance */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float Speed_Crouch = 180.f;
@@ -78,10 +91,17 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Movement")
 	EMovementStance CurrentStance = EMovementStance::Walk;
 
-	void SetStance(EMovementStance NewStance);
+	/** Crouch toggle input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> IA_Crouch;
 
-	void ApplyStanceSpeed();
-			
+	/** Sprint hold input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input",
+		meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> IA_Sprint;
+
+	
 
 protected:
 

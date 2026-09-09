@@ -85,6 +85,34 @@ void AStealthCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AStealthCharacter::Look);
+
+		// Crouch: toggle, so only Started
+		if (IA_Crouch)
+		{
+			EnhancedInputComponent->BindAction(
+				IA_Crouch, ETriggerEvent::Started,
+				this, &AStealthCharacter::OnCrouchToggle);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("IA_Crouch is not assigned in BP"));
+		}
+
+		// Sprint: hold, so both Started and Completed
+		if (IA_Sprint)
+		{
+			EnhancedInputComponent->BindAction(
+				IA_Sprint, ETriggerEvent::Started,
+				this, &AStealthCharacter::OnSprintStart);
+
+			EnhancedInputComponent->BindAction(
+				IA_Sprint, ETriggerEvent::Completed,
+				this, &AStealthCharacter::OnSprintEnd);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("IA_Sprint is not assigned in BP"));
+		}
 	}
 	else
 	{
@@ -167,4 +195,24 @@ void AStealthCharacter::SetStance(EMovementStance NewStance)
 
 	UE_LOG(LogTemp, Warning, TEXT("Stance -> %s"),
 		*UEnum::GetValueAsString(CurrentStance));
+}
+
+void AStealthCharacter::OnCrouchToggle()
+{
+	SetStance(CurrentStance == EMovementStance::Crouch
+		? EMovementStance::Walk
+		: EMovementStance::Crouch);
+}
+
+void AStealthCharacter::OnSprintStart()
+{
+	SetStance(EMovementStance::Sprint);
+}
+
+void AStealthCharacter::OnSprintEnd()
+{
+	if (CurrentStance == EMovementStance::Sprint)
+	{
+		SetStance(EMovementStance::Walk);
+	}
 }
