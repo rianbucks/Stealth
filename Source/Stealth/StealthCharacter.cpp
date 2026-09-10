@@ -35,6 +35,7 @@ AStealthCharacter::AStealthCharacter()
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = Speed_Walk;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = Speed_Crouch;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -52,6 +53,9 @@ AStealthCharacter::AStealthCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	// Required. Crouch() silently does nothing without this.
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -173,7 +177,8 @@ void AStealthCharacter::ApplyStanceSpeed()
 	switch (CurrentStance)
 	{
 	case EMovementStance::Crouch:
-		Move->MaxWalkSpeed = Speed_Crouch;
+		// Handled by MaxWalkSpeedCrouched.
+        // Setting MaxWalkSpeed here has no effect while bIsCrouched is true.
 		break;
 
 	case EMovementStance::Walk:
@@ -191,6 +196,17 @@ void AStealthCharacter::SetStance(EMovementStance NewStance)
 	if (CurrentStance == NewStance) { return; }
 
 	CurrentStance = NewStance;
+	
+	// Request crouch/uncrouch. Applied on the next movement update.
+	if (NewStance == EMovementStance::Crouch)
+	{
+		Crouch();
+	}
+	else if (bIsCrouched)
+	{
+		UnCrouch();
+	}
+
 	ApplyStanceSpeed();
 
 	UE_LOG(LogTemp, Warning, TEXT("Stance -> %s"),
