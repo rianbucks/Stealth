@@ -8,3 +8,5 @@ Saved/
 *.suo
 *.VC.db
 *.VC.opendb
+Docs/notes/*_annotated.cpp
+ADR
