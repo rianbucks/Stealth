@@ -79,13 +79,13 @@ protected:
 
 	/** Movement speed for each stance */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float Speed_Crouch = 180.f;
+	float Speed_Crouch = 120.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float Speed_Walk = 380.f;
+	float Speed_Walk = 200.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float Speed_Sprint = 650.f;
+	float Speed_Sprint = 400.f;
 
 	/** Current movement stance */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Movement")
