@@ -2,6 +2,7 @@
 
 
 #include "EnemySearcher.h"
+#include "EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -22,6 +23,15 @@ AEnemySearcher::AEnemySearcher()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 300.0f, 0.0f);
 	GetCharacterMovement()->MaxWalkSpeed = Speed_Patrol;
+
+	// AI path following must apply acceleration, otherwise the animation
+	// blueprint sees zero acceleration and never plays the walk cycle.
+	GetCharacterMovement()->GetNavMovementProperties()->bUseAccelerationForPaths = true;
+
+	AIControllerClass = AEnemyAIController::StaticClass();
+
+	// Possess both level-placed and runtime-spawned instances.
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 // Called when the game starts or when spawned

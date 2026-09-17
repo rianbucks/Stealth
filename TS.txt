@@ -1,0 +1,17 @@
+## TS-00X: AI가 이동하는데 걷기 애니메이션이 안 나옴
+
+**증상**
+적이 목표 지점으로 이동하지만 서 있는 자세로 미끄러짐.
+Output Log에 오류 없음. Ground Speed는 110으로 정상.
+
+**원인**
+CharacterMovement의 Use Acceleration for Paths가 기본 false.
+AI 경로 추종 시 가속도를 쓰지 않고 속도를 직접 설정한다.
+ABP_Manny는 Should Move 조건으로 "Ground Speed > 3 AND Acceleration != 0"을
+요구하므로, 가속도가 0이면 걷기 애니메이션이 재생되지 않는다.
+
+**해결**
+생성자에 bUseAccelerationForPaths = true 추가
+
+**교훈**
+두 시스템(이동·애니메이션)이 서로 다른 값을 보고 있을 때는 양쪽이 각각 무엇을 읽는지 확인해야 한다.

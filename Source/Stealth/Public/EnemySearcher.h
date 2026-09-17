@@ -35,4 +35,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+public:
+	/** Where this enemy walks to first. Set per instance in the level. */
+	UPROPERTY(EditInstanceOnly, Category = "Patrol")
+	TObjectPtr<AActor> FirstTarget;
+
 };
