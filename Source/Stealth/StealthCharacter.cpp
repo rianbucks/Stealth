@@ -4,7 +4,6 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "NavigationSystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
@@ -164,10 +163,6 @@ void AStealthCharacter::Look(const FInputActionValue& Value)
 void AStealthCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// Temporary. Checks that NavigationSystem module is linked. Remove after D2.
-	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
-	UE_LOG(LogTemp, Warning, TEXT("NavSystem: %s"),NavSys ? TEXT("Found") : TEXT("NULL"));
 
 	SetStance(EMovementStance::Sprint);
 	SetStance(EMovementStance::Walk);

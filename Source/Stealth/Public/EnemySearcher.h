@@ -36,8 +36,16 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	/** Where this enemy walks to first. Set per instance in the level. */
+	/** Patrol route. Set per instance in the level. */
 	UPROPERTY(EditInstanceOnly, Category = "Patrol")
-	TObjectPtr<AActor> FirstTarget;
+	TArray<TObjectPtr<AActor>> PatrolPoints;
+
+	/** Seconds to wait at each patrol point. */
+	UPROPERTY(EditDefaultsOnly, Category = "Patrol")
+	float PatrolWaitTime = 3.0f;
+
+	/** Draws the current patrol target in the level. */
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bShowDebug = true;
 
 };

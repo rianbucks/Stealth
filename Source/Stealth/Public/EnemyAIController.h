@@ -18,7 +18,19 @@ class STEALTH_API AEnemyAIController : public AAIController
 		virtual void BeginPlay() override;
 		virtual void OnPossess(APawn* InPawn) override;
 
-		/** Issues the first move command. Called on a short delay. */
-		void StartFirstMove();
+		/** Called by the engine when a move request finishes. */
+		virtual void OnMoveCompleted(FAIRequestID RequestID,
+			const FPathFollowingResult& Result) override;
+
+		/** Issues a move command toward the current patrol point. */
+		void MoveToCurrentPoint();
+
+		/** Advances to the next point and moves. Called after the wait timer. */
+		void GoToNextPoint();
+
+		/** Index into the pawn's PatrolPoints array. */
+		int32 CurrentIndex = 0;
+
+		FTimerHandle WaitTimer;
 
 };
