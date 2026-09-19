@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -12,22 +10,20 @@ class STEALTH_API AEnemySearcher : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AEnemySearcher();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	/** Patrolling speed*/
+	// Patrolling speed
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float Speed_Patrol = 110.f;
 
-	/** Tracing speed */
+	// Tracing speed
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float Speed_Investigate = 180.f;
 
-	/** Chasing speed */
+	// Chasing speed
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float Speed_Chase = 350.f;
 
@@ -36,15 +32,12 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	/** Patrol route. Set per instance in the level. */
 	UPROPERTY(EditInstanceOnly, Category = "Patrol")
 	TArray<TObjectPtr<AActor>> PatrolPoints;
 
-	/** Seconds to wait at each patrol point. */
 	UPROPERTY(EditDefaultsOnly, Category = "Patrol")
 	float PatrolWaitTime = 3.0f;
 
-	/** Draws the current patrol target in the level. */
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	bool bShowDebug = true;
 
