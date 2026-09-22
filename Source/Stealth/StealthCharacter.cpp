@@ -2,6 +2,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "LightingSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
@@ -137,6 +138,12 @@ void AStealthCharacter::Look(const FInputActionValue& Value)
 void AStealthCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player sees %d lights"),
+			Lighting->GetCachedLightCount());
+	}
 
 	SetStance(EMovementStance::Sprint);
 	SetStance(EMovementStance::Walk);
