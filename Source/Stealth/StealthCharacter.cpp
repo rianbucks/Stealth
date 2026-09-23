@@ -3,6 +3,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "LightingSubsystem.h"
+#include "TimerManager.h"
+#include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
@@ -139,11 +141,8 @@ void AStealthCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Player sees %d lights"),
-			Lighting->GetCachedLightCount());
-	}
+	GetWorldTimerManager().SetTimer(LightDebugTimer, this,
+		&AStealthCharacter::UpdateLightDebug, 0.1f, true);
 
 	SetStance(EMovementStance::Sprint);
 	SetStance(EMovementStance::Walk);
@@ -209,4 +208,18 @@ void AStealthCharacter::OnSprintEnd()
 	{
 		SetStance(EMovementStance::Walk);
 	}
+}
+
+void AStealthCharacter::UpdateLightDebug()
+{
+	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
+	if (!Lighting || !GEngine)
+	{
+		return;
+	}
+
+	const float Value = Lighting->GetLightIntensityAtLocation(GetActorLocation());
+
+	GEngine->AddOnScreenDebugMessage(1, 0.15f, FColor::Yellow,
+		FString::Printf(TEXT("Light: %.2f"), Value));
 }

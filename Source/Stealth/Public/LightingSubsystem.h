@@ -16,7 +16,11 @@ public:
 
 	int32 GetCachedLightCount() const { return CachedLights.Num(); }
 
+	float GetLightIntensityAtLocation(const FVector& Location) const;
+
 private:
+	float AttenuationExponent = 2.f;
+
 	UPROPERTY()
 	TArray<TObjectPtr<APointLight>> CachedLights;
 };

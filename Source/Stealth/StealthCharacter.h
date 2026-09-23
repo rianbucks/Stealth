@@ -84,6 +84,11 @@ protected:
 		meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> IA_Sprint;
 
+	// Temporary debug. Remove after W4.
+	void UpdateLightDebug();
+
+	FTimerHandle LightDebugTimer;
+
 	
 
 protected:

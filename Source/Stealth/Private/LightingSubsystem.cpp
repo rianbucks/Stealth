@@ -28,3 +28,41 @@ void ULightingSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	UE_LOG(LogTemp, Warning, TEXT("LightingSubsystem: cached %d point lights"),
 		CachedLights.Num());
 }
+
+float ULightingSubsystem::GetLightIntensityAtLocation(const FVector& Location) const
+{
+	float Total = 0.f;
+
+	for (const TObjectPtr<APointLight>& Light : CachedLights)
+	{
+		if (!IsValid(Light))
+		{
+			continue;
+		}
+
+		const UPointLightComponent* Comp =
+			Cast<UPointLightComponent>(Light->GetLightComponent());
+
+		if (!Comp || !Comp->IsVisible())
+		{
+			continue;
+		}
+
+		const float Radius = Comp->AttenuationRadius;
+		if (Radius <= 0.f)
+		{
+			continue;
+		}
+
+		const float Distance = FVector::Dist(Light->GetActorLocation(), Location);
+
+		if (Distance >= Radius)
+		{
+			continue;
+		}
+
+		Total += FMath::Pow(1.f - Distance / Radius, AttenuationExponent);
+	}
+
+	return FMath::Clamp(Total, 0.f, 1.f);
+}
