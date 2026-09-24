@@ -2,6 +2,7 @@
 #include "EngineUtils.h"
 #include "Engine/PointLight.h"
 #include "Components/PointLightComponent.h"
+#include "DrawDebugHelpers.h"
 
 void ULightingSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
@@ -29,8 +30,19 @@ void ULightingSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		CachedLights.Num());
 }
 
-float ULightingSubsystem::GetLightIntensityAtLocation(const FVector& Location) const
+float ULightingSubsystem::GetLightIntensityAtLocation(const FVector& Location, bool bDrawDebug) const
 {
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return 0.f;
+	}
+
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(LightOcclusion), false);
+
 	float Total = 0.f;
 
 	for (const TObjectPtr<APointLight>& Light : CachedLights)
@@ -42,7 +54,6 @@ float ULightingSubsystem::GetLightIntensityAtLocation(const FVector& Location) c
 
 		const UPointLightComponent* Comp =
 			Cast<UPointLightComponent>(Light->GetLightComponent());
-
 		if (!Comp || !Comp->IsVisible())
 		{
 			continue;
@@ -54,9 +65,26 @@ float ULightingSubsystem::GetLightIntensityAtLocation(const FVector& Location) c
 			continue;
 		}
 
-		const float Distance = FVector::Dist(Light->GetActorLocation(), Location);
+		const FVector LightLocation = Light->GetActorLocation();
+		const float Distance = FVector::Dist(LightLocation, Location);
 
 		if (Distance >= Radius)
+		{
+			continue;
+		}
+
+		FHitResult Hit;
+		const bool bBlocked = World->LineTraceSingleByObjectType(
+			Hit, LightLocation, Location, ObjectParams, QueryParams);
+
+		if (bDrawDebug)
+		{
+			DrawDebugLine(World, LightLocation, Location,
+				bBlocked ? FColor::Red : FColor::Green,
+				false, 0.15f, 0, 2.f);
+		}
+
+		if (bBlocked)
 		{
 			continue;
 		}

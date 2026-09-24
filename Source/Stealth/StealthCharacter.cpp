@@ -218,7 +218,7 @@ void AStealthCharacter::UpdateLightDebug()
 		return;
 	}
 
-	const float Value = Lighting->GetLightIntensityAtLocation(GetActorLocation());
+	const float Value = Lighting->GetLightIntensityAtLocation(GetActorLocation(), true);
 
 	GEngine->AddOnScreenDebugMessage(1, 0.15f, FColor::Yellow,
 		FString::Printf(TEXT("Light: %.2f"), Value));
