@@ -27,6 +27,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float Speed_Chase = 350.f;
 
+	void UpdateVisibility();
+
+	FTimerHandle VisibilityTimer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Stealth")
+	float VisibilityThreshold = 0.20f;
+
+	// Deadzone
+	UPROPERTY(EditDefaultsOnly, Category = "Stealth")
+	float VisibilityHysteresis = 0.02f;
+
+	bool bCurrentlyVisible = true;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

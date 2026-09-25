@@ -2,6 +2,9 @@
 #include "EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "LightingSubsystem.h"
+#include "TimerManager.h"
+#include "Components/SkeletalMeshComponent.h"
 
 AEnemySearcher::AEnemySearcher()
 {
@@ -24,17 +27,47 @@ AEnemySearcher::AEnemySearcher()
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
-// Called when the game starts or when spawned
 void AEnemySearcher::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	GetWorldTimerManager().SetTimer(VisibilityTimer, this,
+		&AEnemySearcher::UpdateVisibility, 0.1f, true);
 }
 
-// Called every frame
 void AEnemySearcher::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 }
 
+void AEnemySearcher::UpdateVisibility()
+{
+	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
+	if (!Lighting)
+	{
+		return;
+	}
+
+	const float Value = Lighting->GetLightIntensityAtLocation(GetActorLocation());
+
+	const float ShowAt = VisibilityThreshold + VisibilityHysteresis;
+	const float HideAt = VisibilityThreshold - VisibilityHysteresis;
+
+	if (bCurrentlyVisible && Value < HideAt)
+	{
+		bCurrentlyVisible = false;
+		GetMesh()->SetVisibility(false);
+
+		UE_LOG(LogTemp, Warning, TEXT("%s -> HIDDEN (light %.2f)"),
+			*GetActorNameOrLabel(), Value);
+	}
+	else if (!bCurrentlyVisible && Value > ShowAt)
+	{
+		bCurrentlyVisible = true;
+		GetMesh()->SetVisibility(true);
+
+		UE_LOG(LogTemp, Warning, TEXT("%s -> VISIBLE (light %.2f)"),
+			*GetActorNameOrLabel(), Value);
+	}
+}
