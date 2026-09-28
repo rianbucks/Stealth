@@ -9,6 +9,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class USpotLightComponent;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -84,10 +85,18 @@ protected:
 		meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> IA_Sprint;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> IA_Flashlight;
+
 	// Temporary debug. Remove after W4.
 	void UpdateLightDebug();
 
 	FTimerHandle LightDebugTimer;
+
+	UPROPERTY(VisibleAnywhere, Category = "Flashlight")
+	TObjectPtr<USpotLightComponent> Flashlight;
+
+	void OnFlashlightToggle();
 
 	
 

@@ -2,6 +2,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SpotLightComponent.h"
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
 #include "Engine/Engine.h"
@@ -43,8 +44,18 @@ AStealthCharacter::AStealthCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false; 
 
-	
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+
+	// Flashlight
+	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));
+	Flashlight->SetupAttachment(GetCapsuleComponent());
+	Flashlight->SetRelativeLocation(FVector(30.f, 0.f, 40.f));
+	Flashlight->SetMobility(EComponentMobility::Movable);
+	Flashlight->SetVisibility(false);
+
+	Flashlight->AttenuationRadius = 1500.f;
+	Flashlight->InnerConeAngle = 15.f;
+	Flashlight->OuterConeAngle = 30.f;
 }
 
 void AStealthCharacter::NotifyControllerChanged()
@@ -100,6 +111,16 @@ void AStealthCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("IA_Sprint is not assigned in BP"));
+		}
+
+		if (IA_Flashlight)
+		{
+			EnhancedInputComponent->BindAction(IA_Flashlight, ETriggerEvent::Started,
+				this, &AStealthCharacter::OnFlashlightToggle);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("IA_Flashlight is not assigned"));
 		}
 	}
 	else
@@ -222,4 +243,18 @@ void AStealthCharacter::UpdateLightDebug()
 
 	GEngine->AddOnScreenDebugMessage(1, 0.15f, FColor::Yellow,
 		FString::Printf(TEXT("Light: %.2f"), Value));
+}
+
+void AStealthCharacter::OnFlashlightToggle()
+{
+	if (!Flashlight)
+	{
+		return;
+	}
+
+	const bool bNewState = !Flashlight->IsVisible();
+	Flashlight->SetVisibility(bNewState);
+
+	UE_LOG(LogTemp, Warning, TEXT("Flashlight -> %s"),
+		bNewState ? TEXT("ON") : TEXT("OFF"));
 }
