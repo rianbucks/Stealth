@@ -47,10 +47,9 @@ class AStealthCharacter : public ACharacter
 
 public:
 	AStealthCharacter();
-	
 
 protected:
-
+	// movement functions
 	void Move(const FInputActionValue& Value);
 
 	void Look(const FInputActionValue& Value);
@@ -88,7 +87,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> IA_Flashlight;
 
-	// Temporary debug. Remove after W4.
+	// Temporary debug
 	void UpdateLightDebug();
 
 	FTimerHandle LightDebugTimer;
@@ -96,9 +95,35 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Flashlight")
 	TObjectPtr<USpotLightComponent> Flashlight;
 
-	void OnFlashlightToggle();
+	// flashlight functions
+	void OnFlashlightStart();
+	void OnFlashlightEnd();
+	void UpdateBattery();
 
-	
+	UPROPERTY(VisibleInstanceOnly, Category = "Flashlight")
+	float Battery = 5.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	float Battery_Max = 5.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	float Battery_DrainRate = 1.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	float Battery_RechargeRate = 0.5f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Flashlight")
+	bool bBatteryDepleted = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	float Flashlight_SelfGlow = 0.35f;
+
+	FTimerHandle BatteryTimer;
+
+	static constexpr float BatteryUpdateInterval = 0.1f;
+
+	// aiming functions
+	void SetAimMode(bool bAiming);
 
 protected:
 
@@ -111,5 +136,9 @@ protected:
 public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	float GetEffectiveIlluminance(bool bDrawDebug = false) const;
+
+	float GetBatteryRatio() const { return Battery_Max > 0.f ? Battery / Battery_Max : 0.f; }
 };
 

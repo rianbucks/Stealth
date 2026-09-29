@@ -115,12 +115,17 @@ void AStealthCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		if (IA_Flashlight)
 		{
-			EnhancedInputComponent->BindAction(IA_Flashlight, ETriggerEvent::Started,
-				this, &AStealthCharacter::OnFlashlightToggle);
+			EnhancedInputComponent->BindAction(
+				IA_Flashlight, ETriggerEvent::Started,
+				this, &AStealthCharacter::OnFlashlightStart);
+
+			EnhancedInputComponent->BindAction(
+				IA_Flashlight, ETriggerEvent::Completed,
+				this, &AStealthCharacter::OnFlashlightEnd);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("IA_Flashlight is not assigned"));
+			UE_LOG(LogTemp, Warning, TEXT("IA_Flashlight is not assigned in BP"));
 		}
 	}
 	else
@@ -164,6 +169,9 @@ void AStealthCharacter::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(LightDebugTimer, this,
 		&AStealthCharacter::UpdateLightDebug, 0.1f, true);
+
+	GetWorldTimerManager().SetTimer(BatteryTimer, this,
+		&AStealthCharacter::UpdateBattery, BatteryUpdateInterval, true);
 
 	SetStance(EMovementStance::Sprint);
 	SetStance(EMovementStance::Walk);
@@ -233,28 +241,121 @@ void AStealthCharacter::OnSprintEnd()
 
 void AStealthCharacter::UpdateLightDebug()
 {
-	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
-	if (!Lighting || !GEngine)
+	if (!GEngine)
 	{
 		return;
 	}
 
-	const float Value = Lighting->GetLightIntensityAtLocation(GetActorLocation(), true);
+	const float Value = GetEffectiveIlluminance(true);
 
 	GEngine->AddOnScreenDebugMessage(1, 0.15f, FColor::Yellow,
 		FString::Printf(TEXT("Light: %.2f"), Value));
+
+	FColor BatteryColor = FColor::White;
+	if (bBatteryDepleted)
+	{
+		BatteryColor = FColor::Red;
+	}
+	else if (Flashlight && Flashlight->IsVisible())
+	{
+		BatteryColor = FColor::Cyan;
+	}
+
+	GEngine->AddOnScreenDebugMessage(2, 0.15f, BatteryColor,
+		FString::Printf(TEXT("Battery: %.1f / %.0f%s"),
+			Battery, Battery_Max, bBatteryDepleted ? TEXT("  [LOCKED]") : TEXT("")));
 }
 
-void AStealthCharacter::OnFlashlightToggle()
+void AStealthCharacter::OnFlashlightStart()
 {
 	if (!Flashlight)
 	{
 		return;
 	}
 
-	const bool bNewState = !Flashlight->IsVisible();
-	Flashlight->SetVisibility(bNewState);
+	if (bBatteryDepleted)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Flashlight: recharging (%.1f / %.0f)"),
+			Battery, Battery_Max);
+		return;
+	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Flashlight -> %s"),
-		bNewState ? TEXT("ON") : TEXT("OFF"));
+	Flashlight->SetVisibility(true);
+	SetAimMode(true);
+
+	UE_LOG(LogTemp, Warning, TEXT("Flashlight -> ON (battery %.1f)"), Battery);
+}
+
+void AStealthCharacter::OnFlashlightEnd()
+{
+	if (!Flashlight)
+	{
+		return;
+	}
+
+	Flashlight->SetVisibility(false);
+	SetAimMode(false);
+
+	UE_LOG(LogTemp, Warning, TEXT("Flashlight -> OFF (battery %.1f)"), Battery);
+}
+
+void AStealthCharacter::UpdateBattery()
+{
+	if (!Flashlight)
+	{
+		return;
+	}
+
+	if (bBatteryDepleted)
+	{
+		Battery = FMath::Min(Battery + Battery_RechargeRate * BatteryUpdateInterval,
+			Battery_Max);
+
+		if (Battery >= Battery_Max)
+		{
+			Battery = Battery_Max;
+			bBatteryDepleted = false;
+			UE_LOG(LogTemp, Warning, TEXT("Flashlight: recharged"));
+		}
+		return;
+	}
+
+	if (Flashlight->IsVisible())
+	{
+		Battery -= Battery_DrainRate * BatteryUpdateInterval;
+
+		if (Battery <= 0.f)
+		{
+			Battery = 0.f;
+			bBatteryDepleted = true;
+			Flashlight->SetVisibility(false);
+			SetAimMode(false);
+
+			UE_LOG(LogTemp, Warning, TEXT("Flashlight -> OFF (depleted)"));
+		}
+	}
+}
+
+float AStealthCharacter::GetEffectiveIlluminance(bool bDrawDebug) const
+{
+	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
+
+	float Value = Lighting
+		? Lighting->GetLightIntensityAtLocation(GetActorLocation(), bDrawDebug)
+		: 0.f;
+
+	// Holding a light makes you visible, wherever you point
+	if (Flashlight && Flashlight->IsVisible())
+	{
+		Value += Flashlight_SelfGlow;
+	}
+
+	return FMath::Clamp(Value, 0.f, 1.f);
+}
+
+void AStealthCharacter::SetAimMode(bool bAiming)
+{
+	// Face the camera while aiming, face movement direction otherwise
+	bUseControllerRotationYaw = bAiming;
+	GetCharacterMovement()->bOrientRotationToMovement = !bAiming;
 }
