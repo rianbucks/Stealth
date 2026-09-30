@@ -1,6 +1,7 @@
 #include "EnemySearcher.h"
 #include "EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
@@ -31,6 +32,18 @@ void AEnemySearcher::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (GetMesh())
+	{
+		const int32 MaterialCount = GetMesh()->GetNumMaterials();
+		for (int32 Index = 0; Index < MaterialCount; ++Index)
+		{
+			if (UMaterialInstanceDynamic* Dynamic = GetMesh()->CreateAndSetMaterialInstanceDynamic(Index))
+			{
+				BodyMaterials.Add(Dynamic);
+			}
+		}
+	}
+
 	GetWorldTimerManager().SetTimer(VisibilityTimer, this,
 		&AEnemySearcher::UpdateVisibility, 0.1f, true);
 }
@@ -44,30 +57,20 @@ void AEnemySearcher::Tick(float DeltaTime)
 void AEnemySearcher::UpdateVisibility()
 {
 	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
-	if (!Lighting)
+	if (!Lighting) { return; }
+
+	const float Light = Lighting->GetLightIntensityAtLocation(GetActorLocation());
+
+	const float Range = Visibility_FullLight - Visibility_MinLight;
+	const float Exposure = Range > 0.f
+		? FMath::Clamp((Light - Visibility_MinLight) / Range, 0.f, 1.f)
+		: 0.f;
+
+	for (const TObjectPtr<UMaterialInstanceDynamic>& Material : BodyMaterials)
 	{
-		return;
-	}
-
-	const float Value = Lighting->GetLightIntensityAtLocation(GetActorLocation());
-
-	const float ShowAt = VisibilityThreshold + VisibilityHysteresis;
-	const float HideAt = VisibilityThreshold - VisibilityHysteresis;
-
-	if (bCurrentlyVisible && Value < HideAt)
-	{
-		bCurrentlyVisible = false;
-		GetMesh()->SetVisibility(false);
-
-		UE_LOG(LogTemp, Warning, TEXT("%s -> HIDDEN (light %.2f)"),
-			*GetActorNameOrLabel(), Value);
-	}
-	else if (!bCurrentlyVisible && Value > ShowAt)
-	{
-		bCurrentlyVisible = true;
-		GetMesh()->SetVisibility(true);
-
-		UE_LOG(LogTemp, Warning, TEXT("%s -> VISIBLE (light %.2f)"),
-			*GetActorNameOrLabel(), Value);
+		if (Material)
+		{
+			Material->SetScalarParameterValue(TEXT("Exposure"), Exposure);
+		}
 	}
 }

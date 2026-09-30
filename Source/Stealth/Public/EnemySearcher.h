@@ -1,8 +1,8 @@
-#pragma once
-
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "EnemySearcher.generated.h"
+
+class UMaterialInstanceDynamic;
 
 UCLASS()
 class STEALTH_API AEnemySearcher : public ACharacter
@@ -31,14 +31,14 @@ protected:
 
 	FTimerHandle VisibilityTimer;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Stealth")
-	float VisibilityThreshold = 0.20f;
+	UPROPERTY(EditDefaultsOnly, Category = "Visibility")
+	float Visibility_MinLight = 0.08f;
 
-	// Deadzone
-	UPROPERTY(EditDefaultsOnly, Category = "Stealth")
-	float VisibilityHysteresis = 0.02f;
+	UPROPERTY(EditDefaultsOnly, Category = "Visibility")
+	float Visibility_FullLight = 0.35f;
 
-	bool bCurrentlyVisible = true;
+	UPROPERTY()
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials;
 
 public:	
 	// Called every frame
