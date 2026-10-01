@@ -10,6 +10,7 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 class USpotLightComponent;
+class UUserWidget;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -87,10 +88,25 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> IA_Flashlight;
 
-	// Temporary debug
-	void UpdateLightDebug();
+	// debug functions
+	void UpdateIlluminanceCache();
+	FTimerHandle IlluminanceCacheTimer;
 
-	FTimerHandle LightDebugTimer;
+	UPROPERTY(VisibleInstanceOnly, Category = "Flashlight")
+	float CachedIlluminance = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bShowLightDebug = false;
+
+	// HUD functions
+	UPROPERTY(EditDefaultsOnly, Category = "HUD")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> HUDWidget;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HUD")
+	float Concealment_FullExposure = 0.30f;
 
 	UPROPERTY(VisibleAnywhere, Category = "Flashlight")
 	TObjectPtr<USpotLightComponent> Flashlight;
@@ -139,6 +155,13 @@ public:
 
 	float GetEffectiveIlluminance(bool bDrawDebug = false) const;
 
+	UFUNCTION(BlueprintPure, Category = "HUD")
 	float GetBatteryRatio() const { return Battery_Max > 0.f ? Battery / Battery_Max : 0.f; }
+
+	UFUNCTION(BlueprintPure, Category = "HUD")
+	float GetConcealmentRatio() const;
+
+	UFUNCTION(BlueprintPure, Category = "HUD")
+	bool IsBatteryDepleted() const { return bBatteryDepleted; }
 };
 

@@ -5,6 +5,7 @@
 #include "Components/SpotLightComponent.h"
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
+#include "Blueprint/UserWidget.h"
 #include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -167,8 +168,21 @@ void AStealthCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GetWorldTimerManager().SetTimer(LightDebugTimer, this,
-		&AStealthCharacter::UpdateLightDebug, 0.1f, true);
+	GetWorldTimerManager().SetTimer(IlluminanceCacheTimer, this,
+		&AStealthCharacter::UpdateIlluminanceCache, BatteryUpdateInterval, true);
+
+	if (HUDWidgetClass)
+	{
+		HUDWidget = CreateWidget<UUserWidget>(GetWorld(), HUDWidgetClass);
+		if (HUDWidget)
+		{
+			HUDWidget->AddToViewport();
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("HUDWidgetClass is not assigned in BP"));
+	}
 
 	GetWorldTimerManager().SetTimer(BatteryTimer, this,
 		&AStealthCharacter::UpdateBattery, BatteryUpdateInterval, true);
@@ -239,31 +253,23 @@ void AStealthCharacter::OnSprintEnd()
 	}
 }
 
-void AStealthCharacter::UpdateLightDebug()
+void AStealthCharacter::UpdateIlluminanceCache()
 {
-	if (!GEngine)
+	CachedIlluminance = GetEffectiveIlluminance(bShowLightDebug);
+
+	if (bShowLightDebug && GEngine)
 	{
-		return;
+		GEngine->AddOnScreenDebugMessage(
+			1, 0.2f, FColor::Yellow,
+			FString::Printf(TEXT("Light: %.2f  Conceal: %.0f%%  Battery: %.1f"),
+				CachedIlluminance, GetConcealmentRatio() * 100.f, Battery));
 	}
+}
 
-	const float Value = GetEffectiveIlluminance(true);
-
-	GEngine->AddOnScreenDebugMessage(1, 0.15f, FColor::Yellow,
-		FString::Printf(TEXT("Light: %.2f"), Value));
-
-	FColor BatteryColor = FColor::White;
-	if (bBatteryDepleted)
-	{
-		BatteryColor = FColor::Red;
-	}
-	else if (Flashlight && Flashlight->IsVisible())
-	{
-		BatteryColor = FColor::Cyan;
-	}
-
-	GEngine->AddOnScreenDebugMessage(2, 0.15f, BatteryColor,
-		FString::Printf(TEXT("Battery: %.1f / %.0f%s"),
-			Battery, Battery_Max, bBatteryDepleted ? TEXT("  [LOCKED]") : TEXT("")));
+float AStealthCharacter::GetConcealmentRatio() const
+{
+	if (Concealment_FullExposure <= 0.f) { return 0.f; }
+	return FMath::Clamp(1.f - CachedIlluminance / Concealment_FullExposure, 0.f, 1.f);
 }
 
 void AStealthCharacter::OnFlashlightStart()
