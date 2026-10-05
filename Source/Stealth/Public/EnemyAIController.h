@@ -1,14 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
-
 #include "CoreMinimal.h"
 #include "AIController.h"
 #include "EnemyAIController.generated.h"
 
-/**
- * 
- */
+class UAIPerceptionComponent;
+class UAISenseConfig_Sight;
+struct FAIStimulus;
+
 UCLASS()
 class STEALTH_API AEnemyAIController : public AAIController
 {
@@ -18,19 +15,38 @@ class STEALTH_API AEnemyAIController : public AAIController
 		virtual void BeginPlay() override;
 		virtual void OnPossess(APawn* InPawn) override;
 
-		/** Called by the engine when a move request finishes. */
 		virtual void OnMoveCompleted(FAIRequestID RequestID,
 			const FPathFollowingResult& Result) override;
 
-		/** Issues a move command toward the current patrol point. */
 		void MoveToCurrentPoint();
 
-		/** Advances to the next point and moves. Called after the wait timer. */
 		void GoToNextPoint();
 
-		/** Index into the pawn's PatrolPoints array. */
 		int32 CurrentIndex = 0;
 
 		FTimerHandle WaitTimer;
 
+		UPROPERTY(VisibleAnywhere, Category = "Perception")
+		TObjectPtr<UAIPerceptionComponent> AIPerception;
+
+		UPROPERTY()
+		TObjectPtr<UAISenseConfig_Sight> SightConfig;
+
+		UPROPERTY(EditDefaultsOnly, Category = "Perception")
+		float Sight_Radius = 1500.f;
+
+		UPROPERTY(EditDefaultsOnly, Category = "Perception")
+		float Sight_LoseRadius = 1600.f;
+
+		UPROPERTY(EditDefaultsOnly, Category = "Perception")
+		float Sight_HalfAngle = 50.f;
+
+		UPROPERTY(EditDefaultsOnly, Category = "Perception")
+		float Sight_MaxAge = 5.f;
+
+		UFUNCTION()
+		void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
+	public:
+		AEnemyAIController();
 };
