@@ -161,6 +161,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	float GetConcealmentRatio() const;
 
+	float GetCachedIlluminance() const { return CachedIlluminance; }
+
+	bool IsExposed() const { return CachedIlluminance >= Concealment_FullExposure; }
+
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	bool IsBatteryDepleted() const { return bBatteryDepleted; }
 };

@@ -1,5 +1,6 @@
 #include "EnemyAIController.h"
 #include "EnemySearcher.h"
+#include "Stealth/StealthCharacter.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 #include "Perception/AIPerceptionComponent.h"
@@ -104,13 +105,53 @@ void AEnemyAIController::GoToNextPoint()
 
 void AEnemyAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
-	if (!Actor || !GetPawn()) { return; }
+	AStealthCharacter* Player = Cast<AStealthCharacter>(Actor);
+	if (!Player || !GetPawn()) { return; }
 
-	const float Distance = FVector::Dist(GetPawn()->GetActorLocation(), Actor->GetActorLocation());
+	if (Stimulus.WasSuccessfullySensed())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: IN SIGHT"), *GetPawn()->GetActorNameOrLabel());
 
-	UE_LOG(LogTemp, Warning, TEXT("%s -> %s %s (dist %.0f)"),
-		*GetPawn()->GetActorNameOrLabel(),
-		*Actor->GetActorNameOrLabel(),
-		Stimulus.WasSuccessfullySensed() ? TEXT("SEEN") : TEXT("LOST"),
-		Distance);
+		SightTarget = Player;
+		GetWorldTimerManager().SetTimer(SightCheckTimer, this,
+			&AEnemyAIController::CheckSightTarget, SightCheckInterval, true);
+		CheckSightTarget();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: OUT OF SIGHT"), *GetPawn()->GetActorNameOrLabel());
+
+		GetWorldTimerManager().ClearTimer(SightCheckTimer);
+		SightTarget = nullptr;
+
+		if (bCanSeePlayer)
+		{
+			bCanSeePlayer = false;
+			UE_LOG(LogTemp, Warning, TEXT("%s: LOST"), *GetPawn()->GetActorNameOrLabel());
+		}
+	}
+}
+
+void AEnemyAIController::CheckSightTarget()
+{
+	if (!SightTarget || !GetPawn()) { return; }
+
+	const bool bExposed = SightTarget->IsExposed();
+	if (bExposed != bCanSeePlayer)
+	{
+		bCanSeePlayer = bExposed;
+		UE_LOG(LogTemp, Warning, TEXT("%s: %s (light %.2f)"),
+			*GetPawn()->GetActorNameOrLabel(),
+			bCanSeePlayer ? TEXT("DETECTED") : TEXT("HIDDEN"),
+			SightTarget->GetCachedIlluminance());
+	}
+
+	const AEnemySearcher* Enemy = Cast<AEnemySearcher>(GetPawn());
+	if (Enemy && Enemy->bShowDebug)
+	{
+		DrawDebugString(GetWorld(), FVector(0.f, 0.f, 120.f),
+			bCanSeePlayer ? TEXT("!") : TEXT("?"), GetPawn(),
+			bCanSeePlayer ? FColor::Red : FColor::Yellow,
+			SightCheckInterval * 1.5f, true, 2.f);
+	}
 }

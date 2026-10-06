@@ -4,6 +4,7 @@
 
 class UAIPerceptionComponent;
 class UAISenseConfig_Sight;
+class AStealthCharacter;
 struct FAIStimulus;
 
 UCLASS()
@@ -46,6 +47,18 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 		UFUNCTION()
 		void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
+		UPROPERTY()
+		TObjectPtr<AStealthCharacter> SightTarget;
+
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		bool bCanSeePlayer = false;
+
+		FTimerHandle SightCheckTimer;
+
+		static constexpr float SightCheckInterval = 0.1f;
+
+		void CheckSightTarget();
 
 	public:
 		AEnemyAIController();
