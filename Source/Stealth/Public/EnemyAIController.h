@@ -4,6 +4,7 @@
 
 class UAIPerceptionComponent;
 class UAISenseConfig_Sight;
+class UPrimitiveComponent;
 class AStealthCharacter;
 struct FAIStimulus;
 
@@ -51,14 +52,26 @@ class STEALTH_API AEnemyAIController : public AAIController
 		UPROPERTY()
 		TObjectPtr<AStealthCharacter> SightTarget;
 
+		UPROPERTY()
+		TObjectPtr<AStealthCharacter> NearbyPlayer;
+
 		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
-		bool bCanSeePlayer = false;
+		bool bPlayerDetected = false;
 
-		FTimerHandle SightCheckTimer;
+		FTimerHandle DetectionTimer;
 
-		static constexpr float SightCheckInterval = 0.1f;
+		static constexpr float DetectionInterval = 0.1f;
 
-		void CheckSightTarget();
+		void RefreshWatch();
+		void UpdateDetection();
+
+		UFUNCTION()
+		void OnProximityBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+			UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+		UFUNCTION()
+		void OnProximityEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+			UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	public:
 		AEnemyAIController();

@@ -167,5 +167,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	bool IsBatteryDepleted() const { return bBatteryDepleted; }
+
+	EMovementStance GetStance() const { return CurrentStance; }
 };
 

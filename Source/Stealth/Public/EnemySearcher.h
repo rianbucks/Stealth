@@ -3,6 +3,7 @@
 #include "EnemySearcher.generated.h"
 
 class UMaterialInstanceDynamic;
+class USphereComponent;
 
 UCLASS()
 class STEALTH_API AEnemySearcher : public ACharacter
@@ -38,7 +39,7 @@ protected:
 	float Visibility_FullLight = 0.35f;
 
 	UPROPERTY()
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials;
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials; 
 
 public:	
 	// Called every frame
@@ -54,4 +55,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	bool bShowDebug = true;
 
+	UPROPERTY(VisibleAnywhere, Category = "Perception")
+	TObjectPtr<USphereComponent> ProximitySphere;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float Proximity_CrouchRadius = 0;
 };

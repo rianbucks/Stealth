@@ -1,6 +1,7 @@
 #include "EnemySearcher.h"
 #include "EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "LightingSubsystem.h"
@@ -26,6 +27,11 @@ AEnemySearcher::AEnemySearcher()
 	AIControllerClass = AEnemyAIController::StaticClass();
 
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+	ProximitySphere = CreateDefaultSubobject<USphereComponent>(TEXT("ProximitySphere"));
+	ProximitySphere->SetupAttachment(GetCapsuleComponent());
+	ProximitySphere->SetSphereRadius(250.f);
+	ProximitySphere->SetCollisionProfileName(TEXT("Trigger"));
 }
 
 void AEnemySearcher::BeginPlay()
@@ -42,6 +48,11 @@ void AEnemySearcher::BeginPlay()
 				BodyMaterials.Add(Dynamic);
 			}
 		}
+	}
+
+	if (ProximitySphere)
+	{
+		ProximitySphere->SetHiddenInGame(!bShowDebug);
 	}
 
 	GetWorldTimerManager().SetTimer(VisibilityTimer, this,

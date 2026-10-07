@@ -3,6 +3,8 @@
 #include "Stealth/StealthCharacter.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
+#include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -32,6 +34,15 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
 	UE_LOG(LogTemp, Warning, TEXT("AIController possessed: %s"),
 		*GetNameSafe(InPawn));
+
+	AEnemySearcher* Enemy = Cast<AEnemySearcher>(InPawn);
+	if (Enemy && Enemy->ProximitySphere)
+	{
+		Enemy->ProximitySphere->OnComponentBeginOverlap.AddDynamic(
+			this, &AEnemyAIController::OnProximityBegin);
+		Enemy->ProximitySphere->OnComponentEndOverlap.AddDynamic(
+			this, &AEnemyAIController::OnProximityEnd);
+	}
 }
 
 void AEnemyAIController::BeginPlay()
@@ -108,50 +119,95 @@ void AEnemyAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus
 	AStealthCharacter* Player = Cast<AStealthCharacter>(Actor);
 	if (!Player || !GetPawn()) { return; }
 
-	if (Stimulus.WasSuccessfullySensed())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: IN SIGHT"), *GetPawn()->GetActorNameOrLabel());
+	SightTarget = Stimulus.WasSuccessfullySensed() ? Player : nullptr;
 
-		SightTarget = Player;
-		GetWorldTimerManager().SetTimer(SightCheckTimer, this,
-			&AEnemyAIController::CheckSightTarget, SightCheckInterval, true);
-		CheckSightTarget();
+	UE_LOG(LogTemp, Warning, TEXT("%s: %s"), *GetPawn()->GetActorNameOrLabel(),
+		SightTarget ? TEXT("IN SIGHT") : TEXT("OUT OF SIGHT"));
+
+	RefreshWatch();
+}
+
+void AEnemyAIController::OnProximityBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	AStealthCharacter* Player = Cast<AStealthCharacter>(OtherActor);
+	if (!Player || OtherComp != Player->GetCapsuleComponent() || !GetPawn()) { return; }
+
+	NearbyPlayer = Player;
+	UE_LOG(LogTemp, Warning, TEXT("%s: NEARBY"), *GetPawn()->GetActorNameOrLabel());
+	RefreshWatch();
+}
+
+void AEnemyAIController::OnProximityEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	AStealthCharacter* Player = Cast<AStealthCharacter>(OtherActor);
+	if (!Player || OtherComp != Player->GetCapsuleComponent() || !GetPawn()) { return; }
+
+	NearbyPlayer = nullptr;
+	UE_LOG(LogTemp, Warning, TEXT("%s: LEFT NEARBY"), *GetPawn()->GetActorNameOrLabel());
+	RefreshWatch();
+}
+
+void AEnemyAIController::RefreshWatch()
+{
+	FTimerManager& Timers = GetWorldTimerManager();
+
+	if (SightTarget || NearbyPlayer)
+	{
+		if (!Timers.IsTimerActive(DetectionTimer))
+		{
+			Timers.SetTimer(DetectionTimer, this,
+				&AEnemyAIController::UpdateDetection, DetectionInterval, true);
+		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: OUT OF SIGHT"), *GetPawn()->GetActorNameOrLabel());
-
-		GetWorldTimerManager().ClearTimer(SightCheckTimer);
-		SightTarget = nullptr;
-
-		if (bCanSeePlayer)
-		{
-			bCanSeePlayer = false;
-			UE_LOG(LogTemp, Warning, TEXT("%s: LOST"), *GetPawn()->GetActorNameOrLabel());
-		}
+		Timers.ClearTimer(DetectionTimer);
 	}
+
+	UpdateDetection();
 }
 
-void AEnemyAIController::CheckSightTarget()
+void AEnemyAIController::UpdateDetection()
 {
-	if (!SightTarget || !GetPawn()) { return; }
+	if (!GetPawn()) { return; }
 
-	const bool bExposed = SightTarget->IsExposed();
-	if (bExposed != bCanSeePlayer)
+	const bool bSeen = SightTarget && SightTarget->IsExposed();
+	bool bNear = NearbyPlayer != nullptr;
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	if (bNear && Searcher && NearbyPlayer->GetStance() == EMovementStance::Crouch)
 	{
-		bCanSeePlayer = bExposed;
-		UE_LOG(LogTemp, Warning, TEXT("%s: %s (light %.2f)"),
-			*GetPawn()->GetActorNameOrLabel(),
-			bCanSeePlayer ? TEXT("DETECTED") : TEXT("HIDDEN"),
-			SightTarget->GetCachedIlluminance());
+		const float Distance = FVector::Dist(GetPawn()->GetActorLocation(), NearbyPlayer->GetActorLocation());
+		bNear = Distance <= Searcher->Proximity_CrouchRadius;
+	}
+	const bool bDetected = bSeen || bNear;
+
+	if (bDetected != bPlayerDetected)
+	{
+		bPlayerDetected = bDetected;
+
+		if (!bPlayerDetected)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s: HIDDEN"), *GetPawn()->GetActorNameOrLabel());
+		}
+		else if (bSeen)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s: DETECTED (light %.2f)"),
+				*GetPawn()->GetActorNameOrLabel(), SightTarget->GetCachedIlluminance());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s: DETECTED (near)"), *GetPawn()->GetActorNameOrLabel());
+		}
 	}
 
 	const AEnemySearcher* Enemy = Cast<AEnemySearcher>(GetPawn());
-	if (Enemy && Enemy->bShowDebug)
+	if (Enemy && Enemy->bShowDebug && (SightTarget || NearbyPlayer))
 	{
 		DrawDebugString(GetWorld(), FVector(0.f, 0.f, 120.f),
-			bCanSeePlayer ? TEXT("!") : TEXT("?"), GetPawn(),
-			bCanSeePlayer ? FColor::Red : FColor::Yellow,
-			SightCheckInterval * 1.5f, true, 2.f);
+			bPlayerDetected ? TEXT("!") : TEXT("?"), GetPawn(),
+			bPlayerDetected ? FColor::Red : FColor::Yellow,
+			DetectionInterval * 1.5f, true, 2.f);
 	}
 }
