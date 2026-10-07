@@ -58,6 +58,9 @@ class STEALTH_API AEnemyAIController : public AAIController
 		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
 		bool bPlayerDetected = false;
 
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		bool bSuspicious = false;
+
 		FTimerHandle DetectionTimer;
 
 		static constexpr float DetectionInterval = 0.1f;
@@ -72,6 +75,17 @@ class STEALTH_API AEnemyAIController : public AAIController
 		UFUNCTION()
 		void OnProximityEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 			UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		bool bLightNoticed = false;
+
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		FVector NoticedLocation = FVector::ZeroVector;
+
+		FTimerHandle LightCheckTimer;
+
+		void CheckLight();
+		bool CanSeeLocation(const FVector& Target, float HalfAngle) const;
 
 	public:
 		AEnemyAIController();

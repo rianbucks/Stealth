@@ -165,6 +165,12 @@ public:
 
 	bool IsExposed() const { return CachedIlluminance >= Concealment_FullExposure; }
 
+	float GetExposureThreshold() const { return Concealment_FullExposure; }
+
+	bool IsFlashlightOn() const;
+	float GetFlashlightLightAt(const FVector& Location) const;
+	bool GetFlashlightLitPoint(FVector& OutPoint) const;
+
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	bool IsBatteryDepleted() const { return bBatteryDepleted; }
 

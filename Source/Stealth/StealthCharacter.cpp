@@ -184,6 +184,11 @@ void AStealthCharacter::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("HUDWidgetClass is not assigned in BP"));
 	}
 
+	if (ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>())
+	{
+		Lighting->RegisterSpotLight(Flashlight);
+	}
+
 	GetWorldTimerManager().SetTimer(BatteryTimer, this,
 		&AStealthCharacter::UpdateBattery, BatteryUpdateInterval, true);
 
@@ -350,7 +355,6 @@ float AStealthCharacter::GetEffectiveIlluminance(bool bDrawDebug) const
 		? Lighting->GetLightIntensityAtLocation(GetActorLocation(), bDrawDebug)
 		: 0.f;
 
-	// Holding a light makes you visible, wherever you point
 	if (Flashlight && Flashlight->IsVisible())
 	{
 		Value += Flashlight_SelfGlow;
@@ -364,4 +368,35 @@ void AStealthCharacter::SetAimMode(bool bAiming)
 	// Face the camera while aiming, face movement direction otherwise
 	bUseControllerRotationYaw = bAiming;
 	GetCharacterMovement()->bOrientRotationToMovement = !bAiming;
+}
+
+bool AStealthCharacter::IsFlashlightOn() const
+{
+	return Flashlight && Flashlight->IsVisible();
+}
+
+float AStealthCharacter::GetFlashlightLightAt(const FVector& Location) const
+{
+	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
+	return Lighting ? Lighting->GetSpotLightIntensity(Flashlight, Location) : 0.f;
+}
+
+bool AStealthCharacter::GetFlashlightLitPoint(FVector& OutPoint) const
+{
+	if (!IsFlashlightOn()) { return false; }
+
+	FRotator Direction = Flashlight->GetComponentRotation();
+	Direction.Pitch -= Flashlight->InnerConeAngle;
+
+	const FVector Start = Flashlight->GetComponentLocation();
+	const FVector End = Start + Direction.Vector() * Flashlight->AttenuationRadius;
+
+	FHitResult Hit;
+	if (!GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, FCollisionObjectQueryParams(ECC_WorldStatic)))
+	{
+		return false;
+	}
+
+	OutPoint = Hit.ImpactPoint + Hit.ImpactNormal * 10.f;
+	return true;
 }

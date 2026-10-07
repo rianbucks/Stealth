@@ -38,6 +38,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Visibility")
 	float Visibility_FullLight = 0.35f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Visibility")
+	float Visibility_FadeOutTime = 2.f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Visibility")
+	float ShownExposure = 0.f;
+
+	float LastVisibilityTime = 0.f;
+
 	UPROPERTY()
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials; 
 
@@ -57,6 +65,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category = "Perception")
 	TObjectPtr<USphereComponent> ProximitySphere;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float LightNotice_HalfAngle = 90.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Perception")
 	float Proximity_CrouchRadius = 0;

@@ -5,6 +5,7 @@
 #include "LightingSubsystem.generated.h"
 
 class APointLight;
+class USpotLightComponent;
 
 UCLASS()
 class STEALTH_API ULightingSubsystem : public UWorldSubsystem
@@ -18,9 +19,16 @@ public:
 
 	float GetLightIntensityAtLocation(const FVector& Location, bool bDrawDebug = false) const;
 
+	void RegisterSpotLight(USpotLightComponent* Spot);
+
+	float GetSpotLightIntensity(const USpotLightComponent* Spot, const FVector& Location, bool bDrawDebug = false) const;
+
 private:
 	float AttenuationExponent = 2.f;
 
 	UPROPERTY()
 	TArray<TObjectPtr<APointLight>> CachedLights;
+
+	UPROPERTY()
+	TArray<TObjectPtr<USpotLightComponent>> SpotLights;
 };

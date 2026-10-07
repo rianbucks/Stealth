@@ -73,15 +73,28 @@ void AEnemySearcher::UpdateVisibility()
 	const float Light = Lighting->GetLightIntensityAtLocation(GetActorLocation());
 
 	const float Range = Visibility_FullLight - Visibility_MinLight;
-	const float Exposure = Range > 0.f
+	const float TargetExposure = Range > 0.f
 		? FMath::Clamp((Light - Visibility_MinLight) / Range, 0.f, 1.f)
 		: 0.f;
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float DeltaTime = Now - LastVisibilityTime;
+	LastVisibilityTime = Now;
+
+	if (TargetExposure >= ShownExposure || Visibility_FadeOutTime <= 0.f)
+	{
+		ShownExposure = TargetExposure;
+	}
+	else
+	{
+		ShownExposure = FMath::Max(TargetExposure, ShownExposure - DeltaTime / Visibility_FadeOutTime);
+	}
 
 	for (const TObjectPtr<UMaterialInstanceDynamic>& Material : BodyMaterials)
 	{
 		if (Material)
 		{
-			Material->SetScalarParameterValue(TEXT("Exposure"), Exposure);
+			Material->SetScalarParameterValue(TEXT("Exposure"), ShownExposure);
 		}
 	}
 }
