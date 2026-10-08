@@ -5,6 +5,7 @@
 #include "Components/SpotLightComponent.h"
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
+#include "TraceMarker.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -170,6 +171,9 @@ void AStealthCharacter::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(IlluminanceCacheTimer, this,
 		&AStealthCharacter::UpdateIlluminanceCache, BatteryUpdateInterval, true);
+
+	GetWorldTimerManager().SetTimer(TrailTimer, this,
+		&AStealthCharacter::UpdateTrail, TrailCheckInterval, true);
 
 	if (HUDWidgetClass)
 	{
@@ -399,4 +403,42 @@ bool AStealthCharacter::GetFlashlightLitPoint(FVector& OutPoint) const
 
 	OutPoint = Hit.ImpactPoint + Hit.ImpactNormal * 10.f;
 	return true;
+}
+
+void AStealthCharacter::UpdateTrail()
+{
+	const bool bLeavesTrail = CurrentStance != EMovementStance::Crouch
+		&& GetCharacterMovement()->IsMovingOnGround();
+
+	if (!bLeavesTrail)
+	{
+		bTrailActive = false;
+		return;
+	}
+
+	const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const FVector Foot = GetActorLocation() - FVector(0.f, 0.f, HalfHeight - 5.f);
+
+	if (!bTrailActive)
+	{
+		TrailPoint = Foot;
+		bTrailActive = true;
+		return;
+	}
+
+	if (FVector::Dist2D(Foot, TrailPoint) < Trail_SegmentLength) { return; }
+
+	const bool bSprinting = CurrentStance == EMovementStance::Sprint;
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	if (ATraceMarker* Marker = GetWorld()->SpawnActor<ATraceMarker>(Foot, FRotator::ZeroRotator, Params))
+	{
+		Marker->Init(bSprinting ? ETraceType::Sprint : ETraceType::Walk, TrailPoint,
+			bSprinting ? Trail_SprintLifetime : Trail_WalkLifetime, bShowTraceDebug);
+	}
+
+	TrailPoint = Foot;
 }

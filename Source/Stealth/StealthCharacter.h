@@ -141,6 +141,26 @@ protected:
 	// aiming functions
 	void SetAimMode(bool bAiming);
 
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Trail_SegmentLength = 150.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Trail_WalkLifetime = 5.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Trail_SprintLifetime = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bShowTraceDebug = false;
+
+	FVector TrailPoint = FVector::ZeroVector;
+	bool bTrailActive = false;
+	FTimerHandle TrailTimer;
+
+	static constexpr float TrailCheckInterval = 0.1f;
+
+	void UpdateTrail();
+
 protected:
 
 	virtual void NotifyControllerChanged() override;
