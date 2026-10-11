@@ -6,6 +6,7 @@
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
 #include "TraceMarker.h"
+#include "TraceSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/Engine.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -430,14 +431,14 @@ void AStealthCharacter::UpdateTrail()
 
 	const bool bSprinting = CurrentStance == EMovementStance::Sprint;
 
-	FActorSpawnParameters Params;
-	Params.Owner = this;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	if (ATraceMarker* Marker = GetWorld()->SpawnActor<ATraceMarker>(Foot, FRotator::ZeroRotator, Params))
+	if (UTraceSubsystem* Traces = GetWorld()->GetSubsystem<UTraceSubsystem>())
 	{
-		Marker->Init(bSprinting ? ETraceType::Sprint : ETraceType::Walk, TrailPoint,
+		Traces->SpawnTrail(this, bSprinting ? ETraceType::Sprint : ETraceType::Walk, TrailPoint, Foot,
 			bSprinting ? Trail_SprintLifetime : Trail_WalkLifetime, bShowTraceDebug);
+
+		Traces->SpawnNoise(this, Foot,
+			bSprinting ? Noise_SprintRadius : Noise_WalkRadius,
+			bSprinting ? Noise_SprintLifetime : Noise_WalkLifetime, bShowTraceDebug);
 	}
 
 	TrailPoint = Foot;

@@ -32,3 +32,15 @@ void ATraceMarker::Init(ETraceType InType, const FVector& InStart, float InLifet
 			false, Lifetime, 0, 4.f);
 	}
 }
+
+void ATraceMarker::InitNoise(float InRadius, float InLifetime, bool bDrawDebug)
+{
+	Init(ETraceType::Noise, GetActorLocation(), InLifetime, false);
+	Radius = InRadius;
+
+	if (bDrawDebug && Radius > 0.f)
+	{
+		DrawDebugCircle(GetWorld(), GetActorLocation(), Radius, 48, GetTraceColor(Type),
+			false, Lifetime, 0, 2.f, FVector(1.f, 0.f, 0.f), FVector(0.f, 1.f, 0.f), false);
+	}
+}

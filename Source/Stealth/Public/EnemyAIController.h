@@ -1,3 +1,5 @@
+#pragma once
+
 #include "CoreMinimal.h"
 #include "AIController.h"
 #include "EnemyAIController.generated.h"
@@ -60,6 +62,13 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
 		bool bSuspicious = false;
+
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		bool bNoiseHeard = false;
+
+		FTimerHandle NoiseCheckTimer;
+
+		void CheckNoise();
 
 		FTimerHandle DetectionTimer;
 

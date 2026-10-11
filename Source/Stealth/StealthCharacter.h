@@ -150,6 +150,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Trace")
 	float Trail_SprintLifetime = 10.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Noise_WalkRadius = 500.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Noise_SprintRadius = 1300.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Noise_WalkLifetime = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	float Noise_SprintLifetime = 2.5f;
+
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	bool bShowTraceDebug = false;
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "TraceMarker.generated.h"
@@ -21,6 +23,9 @@ public:
 
 	void Init(ETraceType InType, const FVector& InStart, float InLifetime, bool bDrawDebug);
 
+	void InitNoise(float InRadius, float InLifetime, bool bDrawDebug);
+	float GetRadius() const { return Radius; }
+
 	ETraceType GetTraceType() const { return Type; }
 	FVector GetStart() const { return Start; }
 	float GetSpawnTime() const { return SpawnTime; }
@@ -36,4 +41,7 @@ protected:
 	float Lifetime = 0.f;
 
 	float SpawnTime = 0.f;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Trace")
+	float Radius = 0.f;
 };

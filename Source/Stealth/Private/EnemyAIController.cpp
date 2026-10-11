@@ -2,6 +2,7 @@
 #include "EnemySearcher.h"
 #include "Stealth/StealthCharacter.h"
 #include "TimerManager.h"
+#include "TraceSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Components/SphereComponent.h"
@@ -58,6 +59,9 @@ void AEnemyAIController::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(LightCheckTimer, this,
 		&AEnemyAIController::CheckLight, DetectionInterval, true);
+
+	GetWorldTimerManager().SetTimer(NoiseCheckTimer, this,
+		&AEnemyAIController::CheckNoise, DetectionInterval, true);
 
 	FTimerHandle StartTimer;
 	GetWorldTimerManager().SetTimer(
@@ -157,7 +161,7 @@ void AEnemyAIController::RefreshWatch()
 {
 	FTimerManager& Timers = GetWorldTimerManager();
 
-	if (SightTarget || NearbyPlayer || bLightNoticed)
+	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard)
 	{
 		if (!Timers.IsTimerActive(DetectionTimer))
 		{
@@ -194,7 +198,7 @@ void AEnemyAIController::UpdateDetection()
 	}
 
 	const bool bDetected = bSeen;
-	const bool bSuspect = !bDetected && (bNear || bLightNoticed);
+	const bool bSuspect = !bDetected && (bNear || bLightNoticed || bNoiseHeard);
 
 	if (bDetected != bPlayerDetected)
 	{
@@ -214,8 +218,16 @@ void AEnemyAIController::UpdateDetection()
 	if (bSuspect != bSuspicious)
 	{
 		bSuspicious = bSuspect;
-		UE_LOG(LogTemp, Warning, TEXT("%s: %s"), *GetPawn()->GetActorNameOrLabel(),
-			bSuspicious ? (bNear ? TEXT("SUSPICIOUS (near)") : TEXT("SUSPICIOUS (light)")) : TEXT("CALM"));
+
+		if (bSuspicious)
+		{
+			const TCHAR* Reason = bNear ? TEXT("near") : (bLightNoticed ? TEXT("light") : TEXT("noise"));
+			UE_LOG(LogTemp, Warning, TEXT("%s: SUSPICIOUS (%s)"), *GetPawn()->GetActorNameOrLabel(), Reason);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s: CALM"), *GetPawn()->GetActorNameOrLabel());
+		}
 	}
 
 	if (Searcher && Searcher->bShowDebug && (bPlayerDetected || bSuspicious))
@@ -310,4 +322,35 @@ bool AEnemyAIController::CanSeeLocation(const FVector& Target, float HalfAngle) 
 
 	FHitResult Hit;
 	return !GetWorld()->LineTraceSingleByChannel(Hit, EyeLocation, Target, ECC_Visibility, Params);
+}
+
+void AEnemyAIController::CheckNoise()
+{
+	const APawn* MyPawn = GetPawn();
+	const UTraceSubsystem* Traces = GetWorld()->GetSubsystem<UTraceSubsystem>();
+	if (!MyPawn || !Traces) { return; }
+
+	bool bHeard = false;
+	float NewestTime = -1.f;
+
+	for (const TObjectPtr<ATraceMarker>& Marker : Traces->GetMarkers())
+	{
+		if (!IsValid(Marker) || Marker->GetTraceType() != ETraceType::Noise) { continue; }
+
+		const float Distance = FVector::Dist(MyPawn->GetActorLocation(), Marker->GetActorLocation());
+		if (Distance > Marker->GetRadius()) { continue; }
+
+		if (Marker->GetSpawnTime() > NewestTime)
+		{
+			NewestTime = Marker->GetSpawnTime();
+			NoticedLocation = Marker->GetActorLocation();
+			bHeard = true;
+		}
+	}
+
+	if (bHeard != bNoiseHeard)
+	{
+		bNoiseHeard = bHeard;
+		RefreshWatch();
+	}
 }
