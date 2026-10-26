@@ -19,17 +19,6 @@ class STEALTH_API AEnemyAIController : public AAIController
 		virtual void BeginPlay() override;
 		virtual void OnPossess(APawn* InPawn) override;
 
-		virtual void OnMoveCompleted(FAIRequestID RequestID,
-			const FPathFollowingResult& Result) override;
-
-		void MoveToCurrentPoint();
-
-		void GoToNextPoint();
-
-		int32 CurrentIndex = 0;
-
-		FTimerHandle WaitTimer;
-
 		UPROPERTY(VisibleAnywhere, Category = "Perception")
 		TObjectPtr<UAIPerceptionComponent> AIPerception;
 

@@ -6,6 +6,7 @@
 
 class UMaterialInstanceDynamic;
 class USphereComponent;
+class UBehaviorTree;
 
 UCLASS()
 class STEALTH_API AEnemySearcher : public ACharacter
@@ -61,6 +62,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Patrol")
 	float PatrolWaitTime = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	TObjectPtr<UBehaviorTree> BehaviorTree;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "AI")
+	int32 PatrolIndex = -1;
 
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	bool bShowDebug = true;

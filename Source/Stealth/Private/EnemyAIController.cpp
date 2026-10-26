@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -38,12 +39,18 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		*GetNameSafe(InPawn));
 
 	AEnemySearcher* Enemy = Cast<AEnemySearcher>(InPawn);
+
 	if (Enemy && Enemy->ProximitySphere)
 	{
 		Enemy->ProximitySphere->OnComponentBeginOverlap.AddDynamic(
 			this, &AEnemyAIController::OnProximityBegin);
 		Enemy->ProximitySphere->OnComponentEndOverlap.AddDynamic(
 			this, &AEnemyAIController::OnProximityEnd);
+	}
+
+	if (Enemy && Enemy->BehaviorTree)
+	{
+		RunBehaviorTree(Enemy->BehaviorTree);
 	}
 }
 
@@ -62,64 +69,6 @@ void AEnemyAIController::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(NoiseCheckTimer, this,
 		&AEnemyAIController::CheckNoise, DetectionInterval, true);
-
-	FTimerHandle StartTimer;
-	GetWorldTimerManager().SetTimer(
-		StartTimer, this, &AEnemyAIController::MoveToCurrentPoint, 0.5f, false);
-}
-
-void AEnemyAIController::MoveToCurrentPoint()
-{
-	AEnemySearcher* Enemy = Cast<AEnemySearcher>(GetPawn());
-	if (!Enemy) { return; }
-
-	if (!Enemy->PatrolPoints.IsValidIndex(CurrentIndex))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: no patrol point at index %d"),
-			*Enemy->GetName(), CurrentIndex);
-		return;
-	}
-
-	AActor* Target = Enemy->PatrolPoints[CurrentIndex];
-	if (!Target)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: patrol point %d is empty"),
-			*Enemy->GetName(), CurrentIndex);
-		return;
-	}
-
-	if (Enemy->bShowDebug)
-	{
-		DrawDebugSphere(GetWorld(), Target->GetActorLocation(),
-			60.f, 12, FColor::Yellow, false, 6.f);
-	}
-
-	MoveToActor(Target, 50.f);
-}
-
-
-void AEnemyAIController::OnMoveCompleted(FAIRequestID RequestID,
-	const FPathFollowingResult& Result)
-{
-	Super::OnMoveCompleted(RequestID, Result);
-
-	AEnemySearcher* Enemy = Cast<AEnemySearcher>(GetPawn());
-	if (!Enemy) { return; }
-
-	GetWorldTimerManager().SetTimer(
-		WaitTimer, this, &AEnemyAIController::GoToNextPoint,
-		Enemy->PatrolWaitTime, false);
-}
-
-
-void AEnemyAIController::GoToNextPoint()
-{
-	AEnemySearcher* Enemy = Cast<AEnemySearcher>(GetPawn());
-	if (!Enemy || Enemy->PatrolPoints.Num() == 0) { return; }
-
-	CurrentIndex = (CurrentIndex + 1) % Enemy->PatrolPoints.Num();
-
-	MoveToCurrentPoint();
 }
 
 void AEnemyAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
