@@ -69,6 +69,12 @@ public:
 	UPROPERTY(VisibleInstanceOnly, Category = "AI")
 	int32 PatrolIndex = -1;
 
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	bool bInvestigate_Retarget = true;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	float Investigate_RetargetDistance = 150.f;
+
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	bool bShowDebug = true;
 

@@ -59,6 +59,8 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 		void CheckNoise();
 
+		void RequestInvestigation(const FVector& Location);
+
 		FTimerHandle DetectionTimer;
 
 		static constexpr float DetectionInterval = 0.1f;

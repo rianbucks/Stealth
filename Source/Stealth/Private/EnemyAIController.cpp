@@ -8,6 +8,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -186,6 +187,15 @@ void AEnemyAIController::UpdateDetection()
 			bPlayerDetected ? FColor::Red : FColor::Yellow,
 			DetectionInterval * 1.5f, true, 2.f);
 	}
+
+	if (bPlayerDetected && SightTarget)
+	{
+		RequestInvestigation(SightTarget->GetActorLocation());
+	}
+	else if (bSuspicious)
+	{
+		RequestInvestigation(NoticedLocation);
+	}
 }
 
 void AEnemyAIController::CheckLight()
@@ -302,4 +312,22 @@ void AEnemyAIController::CheckNoise()
 		bNoiseHeard = bHeard;
 		RefreshWatch();
 	}
+}
+
+void AEnemyAIController::RequestInvestigation(const FVector& Location)
+{
+	UBlackboardComponent* Board = GetBlackboardComponent();
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	if (!Board || !Searcher) { return; }
+
+	if (Board->GetValueAsBool(TEXT("bInvestigating")))
+	{
+		if (!Searcher->bInvestigate_Retarget) { return; }
+
+		const FVector Current = Board->GetValueAsVector(TEXT("InvestigateLocation"));
+		if (FVector::Dist(Current, Location) < Searcher->Investigate_RetargetDistance) { return; }
+	}
+
+	Board->SetValueAsVector(TEXT("InvestigateLocation"), Location);
+	Board->SetValueAsBool(TEXT("bInvestigating"), true);
 }
