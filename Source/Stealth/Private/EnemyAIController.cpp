@@ -3,6 +3,8 @@
 #include "Stealth/StealthCharacter.h"
 #include "TimerManager.h"
 #include "TraceSubsystem.h"
+#include "TraceMarker.h"
+#include "LightingSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Components/SphereComponent.h"
@@ -70,6 +72,9 @@ void AEnemyAIController::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(NoiseCheckTimer, this,
 		&AEnemyAIController::CheckNoise, DetectionInterval, true);
+
+	GetWorldTimerManager().SetTimer(TraceCheckTimer, this,
+		&AEnemyAIController::CheckTrace, DetectionInterval, true);
 }
 
 void AEnemyAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
@@ -111,7 +116,7 @@ void AEnemyAIController::RefreshWatch()
 {
 	FTimerManager& Timers = GetWorldTimerManager();
 
-	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard)
+	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard || bTraceSeen)
 	{
 		if (!Timers.IsTimerActive(DetectionTimer))
 		{
@@ -148,7 +153,7 @@ void AEnemyAIController::UpdateDetection()
 	}
 
 	const bool bDetected = bSeen;
-	const bool bSuspect = !bDetected && (bNear || bLightNoticed || bNoiseHeard);
+	const bool bSuspect = !bDetected && (bNear || bLightNoticed || bNoiseHeard || bTraceSeen);
 
 	if (bDetected != bPlayerDetected)
 	{
@@ -171,7 +176,9 @@ void AEnemyAIController::UpdateDetection()
 
 		if (bSuspicious)
 		{
-			const TCHAR* Reason = bNear ? TEXT("near") : (bLightNoticed ? TEXT("light") : TEXT("noise"));
+			const TCHAR* Reason = bNear ? TEXT("near")
+				: (bLightNoticed ? TEXT("light")
+					: (bNoiseHeard ? TEXT("noise") : TEXT("trace")));
 			UE_LOG(LogTemp, Warning, TEXT("%s: SUSPICIOUS (%s)"), *GetPawn()->GetActorNameOrLabel(), Reason);
 		}
 		else
@@ -296,8 +303,7 @@ void AEnemyAIController::CheckNoise()
 	{
 		if (!IsValid(Marker) || Marker->GetTraceType() != ETraceType::Noise) { continue; }
 
-		const float Distance = FVector::Dist(MyPawn->GetActorLocation(), Marker->GetActorLocation());
-		if (Distance > Marker->GetRadius()) { continue; }
+		if (!IsNoiseAudible(Marker)) { continue; }
 
 		if (Marker->GetSpawnTime() > NewestTime)
 		{
@@ -330,4 +336,71 @@ void AEnemyAIController::RequestInvestigation(const FVector& Location)
 
 	Board->SetValueAsVector(TEXT("InvestigateLocation"), Location);
 	Board->SetValueAsBool(TEXT("bInvestigating"), true);
+}
+
+bool AEnemyAIController::IsNoiseAudible(ATraceMarker* Noise) const
+{
+	const APawn* MyPawn = GetPawn();
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(MyPawn);
+	if (!Noise || !Searcher) { return false; }
+
+	const float Radius = Noise->GetRadius();
+	const FVector Ear = MyPawn->GetActorLocation();
+	const float Dist = FVector::Dist(Noise->GetActorLocation(), Ear);
+	if (Dist > Radius) { return false; }
+	if (Dist <= Radius * Searcher->Noise_WallFactor) { return true; }
+
+	const FVector From = Noise->GetActorLocation() + FVector(0.f, 0.f, 50.f);
+	const FCollisionObjectQueryParams Params(ECC_WorldStatic);
+	return !GetWorld()->LineTraceTestByObjectType(From, Ear, Params);
+}
+
+
+void AEnemyAIController::CheckTrace()
+{
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	const UTraceSubsystem* Traces = GetWorld()->GetSubsystem<UTraceSubsystem>();
+	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
+	if (!Searcher || !Traces || !Lighting || !SightConfig) { return; }
+
+	ATraceMarker* Found = nullptr;
+	const TArray<TObjectPtr<ATraceMarker>>& Markers = Traces->GetMarkers();
+
+	for (int32 i = Markers.Num() - 1; i >= 0; --i)
+	{
+		ATraceMarker* Marker = Markers[i];
+		if (!IsValid(Marker)) { continue; }
+		if (Marker == LastSeenTrace.Get()) { break; }
+		if (Marker->GetTraceType() == ETraceType::Noise) { continue; }
+
+		const FVector Point = Marker->GetActorLocation();
+		if (FVector::Dist(Point, Searcher->GetActorLocation()) > Searcher->TraceDetect_Range) { continue; }
+		if (!CanSeeLocation(Point, SightConfig->PeripheralVisionAngleDegrees)) { continue; }
+		if (Lighting->GetLightIntensityAtLocation(Point) < Searcher->TraceDetect_LightThreshold) { continue; }
+
+		Found = Marker;
+		break;
+	}
+
+	if (Found)
+	{
+		LastSeenTrace = Found;
+		NoticedLocation = Found->GetActorLocation();
+
+		UE_LOG(LogTemp, Warning, TEXT("%s: TRACE SEEN (%s)"), *Searcher->GetActorNameOrLabel(),
+			*UEnum::GetValueAsString(Found->GetTraceType()));
+	}
+
+	const bool bSeenNow = LastSeenTrace.IsValid();
+	if (bSeenNow != bTraceSeen)
+	{
+		bTraceSeen = bSeenNow;
+		RefreshWatch();
+	}
+
+	if (Searcher->bShowDebug && bTraceSeen)
+	{
+		DrawDebugLine(GetWorld(), Searcher->GetPawnViewLocation(), LastSeenTrace->GetActorLocation(),
+			FColor::Green, false, DetectionInterval * 1.5f, 0, 2.f);
+	}
 }

@@ -7,6 +7,7 @@
 class UAIPerceptionComponent;
 class UAISenseConfig_Sight;
 class UPrimitiveComponent;
+class ATraceMarker;
 class AStealthCharacter;
 struct FAIStimulus;
 
@@ -60,6 +61,15 @@ class STEALTH_API AEnemyAIController : public AAIController
 		void CheckNoise();
 
 		void RequestInvestigation(const FVector& Location);
+
+		bool IsNoiseAudible(ATraceMarker* Noise) const;
+		void CheckTrace();
+
+		UPROPERTY(VisibleInstanceOnly, Category = "Detection")
+		bool bTraceSeen = false;
+
+		TWeakObjectPtr<ATraceMarker> LastSeenTrace;
+		FTimerHandle TraceCheckTimer;
 
 		FTimerHandle DetectionTimer;
 

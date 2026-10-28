@@ -75,6 +75,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	float Investigate_RetargetDistance = 150.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float Noise_WallFactor = 0.8f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float TraceDetect_Range = 1500.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float TraceDetect_LightThreshold = 0.25f;
+
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	bool bShowDebug = true;
 
