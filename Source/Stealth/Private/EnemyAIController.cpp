@@ -116,7 +116,7 @@ void AEnemyAIController::RefreshWatch()
 {
 	FTimerManager& Timers = GetWorldTimerManager();
 
-	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard || bTraceSeen)
+	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard || bTraceSeen || Alert > 0.f)
 	{
 		if (!Timers.IsTimerActive(DetectionTimer))
 		{
@@ -152,8 +152,33 @@ void AEnemyAIController::UpdateDetection()
 		NoticedLocation = NearbyPlayer->GetActorLocation();
 	}
 
-	const bool bDetected = bSeen;
-	const bool bSuspect = !bDetected && (bNear || bLightNoticed || bNoiseHeard || bTraceSeen);
+	const bool bOtherSense = bNear || bLightNoticed || bNoiseHeard || bTraceSeen;
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float DeltaTime = FMath::Min(Now - LastAlertTime, DetectionInterval);
+	LastAlertTime = Now;
+
+	if (bSeen && Searcher)
+	{
+		const float Distance = FVector::Dist(GetPawn()->GetActorLocation(), SightTarget->GetActorLocation());
+		const float Ratio = FMath::Clamp(Distance / SightConfig->SightRadius, 0.f, 1.f);
+		const float FillTime = FMath::Max(FMath::Lerp(Searcher->Alert_FillTimeNear, Searcher->Alert_FillTimeFar, Ratio), 0.01f);
+
+		Alert = FMath::Min(Alert + DeltaTime / FillTime, 1.f);
+		NoticedLocation = SightTarget->GetActorLocation();
+	}
+	else if (Searcher)
+	{
+		Alert = FMath::Max(Alert - DeltaTime / FMath::Max(Searcher->Alert_DecayTime, 0.01f), 0.f);
+
+		if (bOtherSense)
+		{
+			Alert = FMath::Max(Alert, Searcher->Alert_SuspicionLevel);
+		}
+	}
+
+	const bool bDetected = Alert >= 1.f;
+	const bool bSuspect = !bDetected && Alert > 0.f;
 
 	if (bDetected != bPlayerDetected)
 	{
@@ -162,7 +187,7 @@ void AEnemyAIController::UpdateDetection()
 		if (bPlayerDetected)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("%s: DETECTED (light %.2f)"),
-				*GetPawn()->GetActorNameOrLabel(), SightTarget->GetCachedIlluminance());
+				*GetPawn()->GetActorNameOrLabel(), SightTarget ? SightTarget->GetCachedIlluminance() : 0.f);
 		}
 		else
 		{
@@ -176,9 +201,11 @@ void AEnemyAIController::UpdateDetection()
 
 		if (bSuspicious)
 		{
-			const TCHAR* Reason = bNear ? TEXT("near")
-				: (bLightNoticed ? TEXT("light")
-					: (bNoiseHeard ? TEXT("noise") : TEXT("trace")));
+			const TCHAR* Reason = bSeen ? TEXT("sight")
+				: (bNear ? TEXT("near")
+					: (bLightNoticed ? TEXT("light")
+						: (bNoiseHeard ? TEXT("noise")
+							: (bTraceSeen ? TEXT("trace") : TEXT("memory")))));
 			UE_LOG(LogTemp, Warning, TEXT("%s: SUSPICIOUS (%s)"), *GetPawn()->GetActorNameOrLabel(), Reason);
 		}
 		else
@@ -190,8 +217,8 @@ void AEnemyAIController::UpdateDetection()
 	if (Searcher && Searcher->bShowDebug && (bPlayerDetected || bSuspicious))
 	{
 		DrawDebugString(GetWorld(), FVector(0.f, 0.f, 120.f),
-			bPlayerDetected ? TEXT("!") : TEXT("?"), GetPawn(),
-			bPlayerDetected ? FColor::Red : FColor::Yellow,
+			FString::Printf(TEXT("%s %d"), bPlayerDetected ? TEXT("!") : TEXT("?"), FMath::RoundToInt(Alert * 100.f)),
+			GetPawn(), bPlayerDetected ? FColor::Red : FColor::Yellow,
 			DetectionInterval * 1.5f, true, 2.f);
 	}
 
@@ -202,6 +229,11 @@ void AEnemyAIController::UpdateDetection()
 	else if (bSuspicious)
 	{
 		RequestInvestigation(NoticedLocation);
+	}
+
+	if (Alert <= 0.f && !SightTarget && !NearbyPlayer && !bLightNoticed && !bNoiseHeard && !bTraceSeen)
+	{
+		GetWorldTimerManager().ClearTimer(DetectionTimer);
 	}
 }
 

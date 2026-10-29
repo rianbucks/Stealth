@@ -68,6 +68,11 @@ class STEALTH_API AEnemyAIController : public AAIController
 		UPROPERTY(VisibleInstanceOnly, Category = "Detection")
 		bool bTraceSeen = false;
 
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		float Alert = 0.f;
+
+		float LastAlertTime = 0.f;
+
 		TWeakObjectPtr<ATraceMarker> LastSeenTrace;
 		FTimerHandle TraceCheckTimer;
 
@@ -99,4 +104,6 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 	public:
 		AEnemyAIController();
+
+		float GetAlert() const { return Alert; }
 };

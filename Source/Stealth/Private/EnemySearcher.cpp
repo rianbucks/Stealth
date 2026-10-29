@@ -7,6 +7,7 @@
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/WidgetComponent.h"
 
 AEnemySearcher::AEnemySearcher()
 {
@@ -32,6 +33,13 @@ AEnemySearcher::AEnemySearcher()
 	ProximitySphere->SetupAttachment(GetCapsuleComponent());
 	ProximitySphere->SetSphereRadius(250.f);
 	ProximitySphere->SetCollisionProfileName(TEXT("Trigger"));
+
+	AlertWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("AlertWidget"));
+	AlertWidget->SetupAttachment(GetRootComponent());
+	AlertWidget->SetRelativeLocation(FVector(0.f, 0.f, 140.f));
+	AlertWidget->SetWidgetSpace(EWidgetSpace::Screen);
+	AlertWidget->SetDrawSize(FVector2D(60.f, 8.f));
+	AlertWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AEnemySearcher::BeginPlay()
@@ -97,4 +105,15 @@ void AEnemySearcher::UpdateVisibility()
 			Material->SetScalarParameterValue(TEXT("Exposure"), ShownExposure);
 		}
 	}
+}
+
+float AEnemySearcher::GetAlertLevel() const
+{
+	const AEnemyAIController* AI = Cast<AEnemyAIController>(GetController());
+	return AI ? AI->GetAlert() : 0.f;
+}
+
+bool AEnemySearcher::ShouldShowAlert() const
+{
+	return GetAlertLevel() > 0.f && (bAlert_ShowInDarkness || ShownExposure > 0.05f);
 }

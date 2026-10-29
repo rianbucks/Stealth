@@ -7,6 +7,7 @@
 class UMaterialInstanceDynamic;
 class USphereComponent;
 class UBehaviorTree;
+class UWidgetComponent;
 
 UCLASS()
 class STEALTH_API AEnemySearcher : public ACharacter
@@ -95,4 +96,28 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Perception")
 	float Proximity_CrouchRadius = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Alert")
+	TObjectPtr<UWidgetComponent> AlertWidget;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Alert")
+	float Alert_FillTimeNear = 0.3f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Alert")
+	float Alert_FillTimeFar = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Alert")
+	float Alert_DecayTime = 4.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Alert")
+	float Alert_SuspicionLevel = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Alert")
+	bool bAlert_ShowInDarkness = false;
+
+	UFUNCTION(BlueprintPure, Category = "Alert")
+	float GetAlertLevel() const;
+
+	UFUNCTION(BlueprintPure, Category = "Alert")
+	bool ShouldShowAlert() const;
 };
