@@ -73,6 +73,14 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 		float LastAlertTime = 0.f;
 
+		UPROPERTY(VisibleInstanceOnly, Category = "Perception")
+		bool bChasing = false;
+
+		float LastSeenTime = 0.f;
+		FVector LastSeenLocation = FVector::ZeroVector;
+
+		void UpdateChase();
+
 		TWeakObjectPtr<ATraceMarker> LastSeenTrace;
 		FTimerHandle TraceCheckTimer;
 

@@ -116,7 +116,7 @@ void AEnemyAIController::RefreshWatch()
 {
 	FTimerManager& Timers = GetWorldTimerManager();
 
-	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard || bTraceSeen || Alert > 0.f)
+	if (SightTarget || NearbyPlayer || bLightNoticed || bNoiseHeard || bTraceSeen || Alert > 0.f || bChasing)
 	{
 		if (!Timers.IsTimerActive(DetectionTimer))
 		{
@@ -222,16 +222,14 @@ void AEnemyAIController::UpdateDetection()
 			DetectionInterval * 1.5f, true, 2.f);
 	}
 
-	if (bPlayerDetected && SightTarget)
-	{
-		RequestInvestigation(SightTarget->GetActorLocation());
-	}
-	else if (bSuspicious)
+	UpdateChase();
+
+	if (!bChasing && bSuspicious)
 	{
 		RequestInvestigation(NoticedLocation);
 	}
 
-	if (Alert <= 0.f && !SightTarget && !NearbyPlayer && !bLightNoticed && !bNoiseHeard && !bTraceSeen)
+	if (Alert <= 0.f && !bChasing && !SightTarget && !NearbyPlayer && !bLightNoticed && !bNoiseHeard && !bTraceSeen)
 	{
 		GetWorldTimerManager().ClearTimer(DetectionTimer);
 	}
@@ -434,5 +432,48 @@ void AEnemyAIController::CheckTrace()
 	{
 		DrawDebugLine(GetWorld(), Searcher->GetPawnViewLocation(), LastSeenTrace->GetActorLocation(),
 			FColor::Green, false, DetectionInterval * 1.5f, 0, 2.f);
+	}
+}
+
+void AEnemyAIController::UpdateChase()
+{
+	UBlackboardComponent* Board = GetBlackboardComponent();
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	if (!Board || !Searcher) { return; }
+
+	const float Now = GetWorld()->GetTimeSeconds();
+
+	if (bPlayerDetected && SightTarget)
+	{
+		LastSeenTime = Now;
+		LastSeenLocation = SightTarget->GetActorLocation();
+
+		if (!bChasing)
+		{
+			bChasing = true;
+			Board->SetValueAsObject(TEXT("TargetActor"), SightTarget.Get());
+			Board->SetValueAsBool(TEXT("bChasing"), true);
+			UE_LOG(LogTemp, Warning, TEXT("%s: CHASE START"), *Searcher->GetActorNameOrLabel());
+		}
+	}
+	else if (bChasing && Now - LastSeenTime >= Searcher->Chase_LoseSightTime)
+	{
+		bChasing = false;
+		Board->ClearValue(TEXT("TargetActor"));
+		Board->SetValueAsBool(TEXT("bChasing"), false);
+		UE_LOG(LogTemp, Warning, TEXT("%s: CHASE LOST"), *Searcher->GetActorNameOrLabel());
+
+		RequestInvestigation(LastSeenLocation);
+	}
+
+	if (bChasing && Searcher->bShowDebug)
+	{
+		if (const AActor* Target = Cast<AActor>(Board->GetValueAsObject(TEXT("TargetActor"))))
+		{
+			DrawDebugLine(GetWorld(), Searcher->GetActorLocation(), Target->GetActorLocation(),
+				FColor::Red, false, DetectionInterval * 1.5f, 0, 3.f);
+		}
+		DrawDebugSphere(GetWorld(), LastSeenLocation, 30.f, 8, FColor::Red,
+			false, DetectionInterval * 1.5f, 0, 2.f);
 	}
 }

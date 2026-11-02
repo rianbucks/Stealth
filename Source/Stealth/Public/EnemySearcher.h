@@ -20,18 +20,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	// Patrolling speed
-	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float Speed_Patrol = 110.f;
-
-	// Tracing speed
-	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float Speed_Investigate = 180.f;
-
-	// Chasing speed
-	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-	float Speed_Chase = 350.f;
-
 	void UpdateVisibility();
 
 	FTimerHandle VisibilityTimer;
@@ -61,9 +49,6 @@ public:
 	UPROPERTY(EditInstanceOnly, Category = "Patrol")
 	TArray<TObjectPtr<AActor>> PatrolPoints;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Patrol")
-	float PatrolWaitTime = 3.0f;
-
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	TObjectPtr<UBehaviorTree> BehaviorTree;
 
@@ -75,6 +60,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	float Investigate_RetargetDistance = 150.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	float Chase_LoseSightTime = 4.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Perception")
 	float Noise_WallFactor = 0.8f;

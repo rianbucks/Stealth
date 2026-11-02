@@ -21,7 +21,6 @@ AEnemySearcher::AEnemySearcher()
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 300.0f, 0.0f);
-	GetCharacterMovement()->MaxWalkSpeed = Speed_Patrol;
 
 	GetCharacterMovement()->GetNavMovementProperties()->bUseAccelerationForPaths = true;
 
