@@ -443,3 +443,23 @@ void AStealthCharacter::UpdateTrail()
 
 	TrailPoint = Foot;
 }
+
+void AStealthCharacter::ApplyEnemyHit(AActor* Attacker)
+{
+	if (bDefeated) { return; }
+
+	++HitCount;
+	UE_LOG(LogTemp, Warning, TEXT("HIT %d / %d by %s"), HitCount, Hit_MaxHits, *GetNameSafe(Attacker));
+
+	if (HitCount >= Hit_MaxHits)
+	{
+		bDefeated = true;
+		UE_LOG(LogTemp, Warning, TEXT("DEFEATED"));
+
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			DisableInput(PC);
+		}
+		GetCharacterMovement()->StopMovementImmediately();
+	}
+}

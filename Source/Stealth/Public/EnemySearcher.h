@@ -65,6 +65,12 @@ public:
 	float Chase_LoseSightTime = 4.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	bool bContact_Detects = true;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float Contact_Radius = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
 	float Noise_WallFactor = 0.8f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Perception")

@@ -200,6 +200,18 @@ public:
 	float GetExposureThreshold() const { return Concealment_FullExposure; }
 
 	bool IsFlashlightOn() const;
+
+	void ApplyEnemyHit(AActor* Attacker);
+	bool IsDefeated() const { return bDefeated; }
+
+	UPROPERTY(EditDefaultsOnly, Category = "Health")
+	int32 Hit_MaxHits = 2;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Health")
+	int32 HitCount = 0;
+
+	bool bDefeated = false;
+
 	float GetFlashlightLightAt(const FVector& Location) const;
 	bool GetFlashlightLitPoint(FVector& OutPoint) const;
 

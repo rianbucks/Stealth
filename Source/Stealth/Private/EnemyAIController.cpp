@@ -152,13 +152,21 @@ void AEnemyAIController::UpdateDetection()
 		NoticedLocation = NearbyPlayer->GetActorLocation();
 	}
 
+	const bool bTouching = Searcher && Searcher->bContact_Detects && NearbyPlayer
+		&& FVector::Dist2D(GetPawn()->GetActorLocation(), NearbyPlayer->GetActorLocation()) <= Searcher->Contact_Radius;
+
 	const bool bOtherSense = bNear || bLightNoticed || bNoiseHeard || bTraceSeen;
 
 	const float Now = GetWorld()->GetTimeSeconds();
 	const float DeltaTime = FMath::Min(Now - LastAlertTime, DetectionInterval);
 	LastAlertTime = Now;
 
-	if (bSeen && Searcher)
+	if (bTouching)
+	{
+		Alert = 1.f;
+		NoticedLocation = NearbyPlayer->GetActorLocation();
+	}
+	else if (bSeen && Searcher)
 	{
 		const float Distance = FVector::Dist(GetPawn()->GetActorLocation(), SightTarget->GetActorLocation());
 		const float Ratio = FMath::Clamp(Distance / SightConfig->SightRadius, 0.f, 1.f);
@@ -222,7 +230,7 @@ void AEnemyAIController::UpdateDetection()
 			DetectionInterval * 1.5f, true, 2.f);
 	}
 
-	UpdateChase();
+	UpdateChase(SightTarget);
 
 	if (!bChasing && bSuspicious)
 	{
@@ -435,7 +443,7 @@ void AEnemyAIController::CheckTrace()
 	}
 }
 
-void AEnemyAIController::UpdateChase()
+void AEnemyAIController::UpdateChase(AStealthCharacter* Spotted)
 {
 	UBlackboardComponent* Board = GetBlackboardComponent();
 	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
@@ -443,15 +451,15 @@ void AEnemyAIController::UpdateChase()
 
 	const float Now = GetWorld()->GetTimeSeconds();
 
-	if (bPlayerDetected && SightTarget)
+	if (bPlayerDetected && Spotted)
 	{
 		LastSeenTime = Now;
-		LastSeenLocation = SightTarget->GetActorLocation();
+		LastSeenLocation = Spotted->GetActorLocation();
 
 		if (!bChasing)
 		{
 			bChasing = true;
-			Board->SetValueAsObject(TEXT("TargetActor"), SightTarget.Get());
+			Board->SetValueAsObject(TEXT("TargetActor"), Spotted);
 			Board->SetValueAsBool(TEXT("bChasing"), true);
 			UE_LOG(LogTemp, Warning, TEXT("%s: CHASE START"), *Searcher->GetActorNameOrLabel());
 		}

@@ -79,7 +79,7 @@ class STEALTH_API AEnemyAIController : public AAIController
 		float LastSeenTime = 0.f;
 		FVector LastSeenLocation = FVector::ZeroVector;
 
-		void UpdateChase();
+		void UpdateChase(AStealthCharacter* Spotted);
 
 		TWeakObjectPtr<ATraceMarker> LastSeenTrace;
 		FTimerHandle TraceCheckTimer;
