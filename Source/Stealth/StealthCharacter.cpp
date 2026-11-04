@@ -1,4 +1,5 @@
 #include "StealthCharacter.h"
+#include "StealthGameMode.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -461,5 +462,10 @@ void AStealthCharacter::ApplyEnemyHit(AActor* Attacker)
 			DisableInput(PC);
 		}
 		GetCharacterMovement()->StopMovementImmediately();
+
+		if (AStealthGameMode* GameMode = GetWorld()->GetAuthGameMode<AStealthGameMode>())
+		{
+			GameMode->ReportPlayerCaught();
+		}
 	}
 }
