@@ -8,6 +8,7 @@ class UMaterialInstanceDynamic;
 class USphereComponent;
 class UBehaviorTree;
 class UWidgetComponent;
+class USpotLightComponent;
 
 UCLASS()
 class STEALTH_API AEnemySearcher : public ACharacter
@@ -37,6 +38,11 @@ protected:
 	float ShownExposure = 0.f;
 
 	float LastVisibilityTime = 0.f;
+
+	FTimerHandle FlashlightTimer;
+
+	void SetFlashlight(bool bOn);
+	void OnFlashlightTimer();
 
 	UPROPERTY()
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> BodyMaterials; 
@@ -114,4 +120,19 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Alert")
 	bool ShouldShowAlert() const;
+
+	UPROPERTY(VisibleAnywhere, Category = "Flashlight")
+	TObjectPtr<USpotLightComponent> Flashlight;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	float Flashlight_OnTime = 20.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	float Flashlight_OffTime = 20.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Flashlight")
+	bool bFlashlight_RechargeOnChase = true;
+
+	bool IsFlashlightOn() const;
+	void OnChaseStarted();
 };

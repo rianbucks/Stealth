@@ -462,6 +462,11 @@ void AEnemyAIController::UpdateChase(AStealthCharacter* Spotted)
 			Board->SetValueAsObject(TEXT("TargetActor"), Spotted);
 			Board->SetValueAsBool(TEXT("bChasing"), true);
 			UE_LOG(LogTemp, Warning, TEXT("%s: CHASE START"), *Searcher->GetActorNameOrLabel());
+
+			if (AEnemySearcher* Body = Cast<AEnemySearcher>(GetPawn()))
+			{
+				Body->OnChaseStarted();
+			}
 		}
 	}
 	else if (bChasing && Now - LastSeenTime >= Searcher->Chase_LoseSightTime)

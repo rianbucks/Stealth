@@ -5,6 +5,8 @@
 #include "TraceSubsystem.h"
 #include "DrawDebugHelpers.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "Stealth/StealthCharacter.h"
 
 ALightButton::ALightButton()
 {
@@ -35,15 +37,15 @@ void ALightButton::BeginPlay()
 
 void ALightButton::CheckLight()
 {
-	const ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>();
-	if (!Lighting || bActivated) { return; }
+	const AStealthCharacter* Player = Cast<AStealthCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+	if (!Player || bActivated) { return; }
 
 	const float Now = GetWorld()->GetTimeSeconds();
 	const float DeltaTime = FMath::Min(Now - LastCheckTime, CheckInterval * 2.f);
 	LastCheckTime = Now;
 
 	const FVector Point = LightSample->GetComponentLocation();
-	const float Light = Lighting->GetLightIntensityAtLocation(Point);
+	const float Light = Player->IsFlashlightOn() ? Player->GetFlashlightLightAt(Point) : 0.f;
 
 	if (Light >= Button_LightThreshold)
 	{

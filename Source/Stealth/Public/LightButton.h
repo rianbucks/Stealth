@@ -39,7 +39,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Button")
 	float Button_LightThreshold = 0.35f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Button")
+	UPROPERTY(EditAnywhere, Category = "Button")
 	float Button_RequiredExposure = 1.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Button")

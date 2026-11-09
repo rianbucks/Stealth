@@ -1,13 +1,14 @@
 #include "EnemySearcher.h"
 #include "EnemyAIController.h"
-#include "Components/CapsuleComponent.h"
-#include "Components/SphereComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "LightingSubsystem.h"
 #include "TimerManager.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 
 AEnemySearcher::AEnemySearcher()
 {
@@ -39,6 +40,15 @@ AEnemySearcher::AEnemySearcher()
 	AlertWidget->SetWidgetSpace(EWidgetSpace::Screen);
 	AlertWidget->SetDrawSize(FVector2D(60.f, 8.f));
 	AlertWidget->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	Flashlight = CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));
+	Flashlight->SetupAttachment(GetCapsuleComponent());
+	Flashlight->SetRelativeLocation(FVector(30.f, 0.f, 40.f));
+	Flashlight->SetMobility(EComponentMobility::Movable);
+	Flashlight->AttenuationRadius = 1500.f;
+	Flashlight->InnerConeAngle = 15.f;
+	Flashlight->OuterConeAngle = 30.f;
+	Flashlight->SetVisibility(false);
 }
 
 void AEnemySearcher::BeginPlay()
@@ -64,6 +74,15 @@ void AEnemySearcher::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(VisibilityTimer, this,
 		&AEnemySearcher::UpdateVisibility, 0.1f, true);
+
+	if (ULightingSubsystem* Lighting = GetWorld()->GetSubsystem<ULightingSubsystem>())
+	{
+		Lighting->RegisterSpotLight(Flashlight);
+	}
+
+	SetFlashlight(true);
+	GetWorldTimerManager().SetTimer(FlashlightTimer, this, &AEnemySearcher::OnFlashlightTimer,
+		FMath::FRandRange(1.f, Flashlight_OnTime), false);
 }
 
 void AEnemySearcher::Tick(float DeltaTime)
@@ -115,4 +134,37 @@ float AEnemySearcher::GetAlertLevel() const
 bool AEnemySearcher::ShouldShowAlert() const
 {
 	return GetAlertLevel() > 0.f && (bAlert_ShowInDarkness || ShownExposure > 0.05f);
+}
+
+bool AEnemySearcher::IsFlashlightOn() const
+{
+	return Flashlight && Flashlight->IsVisible();
+}
+
+void AEnemySearcher::SetFlashlight(bool bOn)
+{
+	Flashlight->SetVisibility(bOn);
+	UE_LOG(LogTemp, Warning, TEXT("%s: FLASHLIGHT %s"), *GetActorNameOrLabel(), bOn ? TEXT("ON") : TEXT("OFF"));
+}
+
+void AEnemySearcher::OnFlashlightTimer()
+{
+	const bool bTurningOff = IsFlashlightOn();
+
+	SetFlashlight(!bTurningOff);
+	GetWorldTimerManager().SetTimer(FlashlightTimer, this, &AEnemySearcher::OnFlashlightTimer,
+		bTurningOff ? Flashlight_OffTime : Flashlight_OnTime, false);
+}
+
+void AEnemySearcher::OnChaseStarted()
+{
+	if (!bFlashlight_RechargeOnChase) { return; }
+
+	if (!IsFlashlightOn())
+	{
+		SetFlashlight(true);
+	}
+
+	GetWorldTimerManager().SetTimer(FlashlightTimer, this, &AEnemySearcher::OnFlashlightTimer, Flashlight_OnTime, false);
+	UE_LOG(LogTemp, Warning, TEXT("%s: FLASHLIGHT RECHARGED (%.0fs)"), *GetActorNameOrLabel(), Flashlight_OnTime);
 }
