@@ -135,4 +135,15 @@ public:
 
 	bool IsFlashlightOn() const;
 	void OnChaseStarted();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float Sight_RadiusOn = 1500.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	float Sight_RadiusOff = 500.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	bool bSight_OffLimitsLightAndTraces = false;
+
+	void SetFaceController(bool bFace);
 };

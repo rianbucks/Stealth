@@ -81,6 +81,12 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 		void UpdateChase(AStealthCharacter* Spotted);
 
+		bool bFacingPlayer = false;
+		void UpdateFacing(AStealthCharacter* Target);
+
+		bool bLookingAround = false;
+		void ApplyRotationMode();
+
 		TWeakObjectPtr<ATraceMarker> LastSeenTrace;
 		FTimerHandle TraceCheckTimer;
 
@@ -114,4 +120,9 @@ class STEALTH_API AEnemyAIController : public AAIController
 		AEnemyAIController();
 
 		float GetAlert() const { return Alert; }
+
+		void ApplyFlashlightSight(bool bFlashlightOn);
+
+		void SetLookAround(bool bLook);
+		void LookToward(float Yaw);
 };

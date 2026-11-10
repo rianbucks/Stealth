@@ -145,6 +145,11 @@ void AEnemySearcher::SetFlashlight(bool bOn)
 {
 	Flashlight->SetVisibility(bOn);
 	UE_LOG(LogTemp, Warning, TEXT("%s: FLASHLIGHT %s"), *GetActorNameOrLabel(), bOn ? TEXT("ON") : TEXT("OFF"));
+
+	if (AEnemyAIController* AI = Cast<AEnemyAIController>(GetController()))
+	{
+		AI->ApplyFlashlightSight(bOn);
+	}
 }
 
 void AEnemySearcher::OnFlashlightTimer()
@@ -167,4 +172,10 @@ void AEnemySearcher::OnChaseStarted()
 
 	GetWorldTimerManager().SetTimer(FlashlightTimer, this, &AEnemySearcher::OnFlashlightTimer, Flashlight_OnTime, false);
 	UE_LOG(LogTemp, Warning, TEXT("%s: FLASHLIGHT RECHARGED (%.0fs)"), *GetActorNameOrLabel(), Flashlight_OnTime);
+}
+
+void AEnemySearcher::SetFaceController(bool bFace)
+{
+	GetCharacterMovement()->bOrientRotationToMovement = !bFace;
+	GetCharacterMovement()->bUseControllerDesiredRotation = bFace;
 }

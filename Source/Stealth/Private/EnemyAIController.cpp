@@ -84,8 +84,9 @@ void AEnemyAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus
 
 	SightTarget = Stimulus.WasSuccessfullySensed() ? Player : nullptr;
 
-	UE_LOG(LogTemp, Warning, TEXT("%s: %s"), *GetPawn()->GetActorNameOrLabel(),
-		SightTarget ? TEXT("IN SIGHT") : TEXT("OUT OF SIGHT"));
+	UE_LOG(LogTemp, Warning, TEXT("%s: %s (%.0f)"), *GetPawn()->GetActorNameOrLabel(),
+		SightTarget ? TEXT("IN SIGHT") : TEXT("OUT OF SIGHT"),
+		FVector::Dist(GetPawn()->GetActorLocation(), Player->GetActorLocation()));
 
 	RefreshWatch();
 }
@@ -230,7 +231,8 @@ void AEnemyAIController::UpdateDetection()
 			DetectionInterval * 1.5f, true, 2.f);
 	}
 
-	UpdateChase(SightTarget);
+	UpdateChase(bSeen ? SightTarget.Get() : (bTouching ? NearbyPlayer.Get() : nullptr));
+	UpdateFacing(bPlayerDetected && bSeen ? SightTarget.Get() : nullptr);
 
 	if (!bChasing && bSuspicious)
 	{
@@ -316,7 +318,9 @@ bool AEnemyAIController::CanSeeLocation(const FVector& Target, float HalfAngle) 
 
 	const FVector ToTarget = Target - EyeLocation;
 	const float Distance = ToTarget.Size();
-	if (Distance > SightConfig->SightRadius || Distance < 1.f) { return false; }
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	const float Range = (Searcher && !Searcher->bSight_OffLimitsLightAndTraces) ? Searcher->Sight_RadiusOn : SightConfig->SightRadius;
+	if (Distance > Range || Distance < 1.f) { return false; }
 
 	const float CosAngle = FVector::DotProduct(EyeRotation.Vector(), ToTarget / Distance);
 	if (CosAngle < FMath::Cos(FMath::DegreesToRadians(HalfAngle))) { return false; }
@@ -488,5 +492,62 @@ void AEnemyAIController::UpdateChase(AStealthCharacter* Spotted)
 		}
 		DrawDebugSphere(GetWorld(), LastSeenLocation, 30.f, 8, FColor::Red,
 			false, DetectionInterval * 1.5f, 0, 2.f);
+	}
+}
+
+
+void AEnemyAIController::ApplyFlashlightSight(bool bFlashlightOn)
+{
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	if (!Searcher || !SightConfig || !AIPerception) { return; }
+
+	const float Radius = bFlashlightOn ? Searcher->Sight_RadiusOn : Searcher->Sight_RadiusOff;
+	SightConfig->SightRadius = Radius;
+	SightConfig->LoseSightRadius = Radius + (Sight_LoseRadius - Sight_Radius);
+	AIPerception->ConfigureSense(*SightConfig);
+
+	UE_LOG(LogTemp, Warning, TEXT("%s: SIGHT %.0f"), *Searcher->GetActorNameOrLabel(), Radius);
+}
+
+void AEnemyAIController::UpdateFacing(AStealthCharacter* Target)
+{
+	const bool bFace = Target != nullptr;
+	if (bFace == bFacingPlayer) { return; }
+	bFacingPlayer = bFace;
+
+	if (bFace)
+	{
+		SetFocus(Target);
+	}
+	else
+	{
+		ClearFocus(EAIFocusPriority::Gameplay);
+	}
+
+	ApplyRotationMode();
+	UE_LOG(LogTemp, Warning, TEXT("%s: FACING %s"), *GetPawn()->GetActorNameOrLabel(), bFace ? TEXT("ON") : TEXT("OFF"));
+}
+
+void AEnemyAIController::SetLookAround(bool bLook)
+{
+	bLookingAround = bLook;
+	if (!bLook)
+	{
+		ClearFocus(EAIFocusPriority::Default);
+	}
+	ApplyRotationMode();
+}
+
+void AEnemyAIController::LookToward(float Yaw)
+{
+	if (!GetPawn()) { return; }
+	SetFocalPoint(GetPawn()->GetActorLocation() + FRotator(0.f, Yaw, 0.f).Vector() * 500.f, EAIFocusPriority::Default);
+}
+
+void AEnemyAIController::ApplyRotationMode()
+{
+	if (AEnemySearcher* Body = Cast<AEnemySearcher>(GetPawn()))
+	{
+		Body->SetFaceController(bFacingPlayer || bLookingAround);
 	}
 }
