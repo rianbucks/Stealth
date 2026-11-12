@@ -11,6 +11,7 @@ class UInputMappingContext;
 class UInputAction;
 class USpotLightComponent;
 class UUserWidget;
+class APointLight;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -61,6 +62,8 @@ protected:
 
 	void OnSprintEnd();
 
+	void ResumeSprintIfHeld();
+
 	void SetStance(EMovementStance NewStance);
 
 	void ApplyStanceSpeed();
@@ -77,6 +80,8 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Movement")
 	EMovementStance CurrentStance = EMovementStance::Walk;
 
+	bool bSprintHeld = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input",
 		meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> IA_Crouch;
@@ -87,6 +92,24 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> IA_Flashlight;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> IA_Interact;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Break")
+	FName Break_Tag = TEXT("Breakable");
+
+	UPROPERTY(EditDefaultsOnly, Category = "Break")
+	float Break_Range = 200.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Break")
+	float Break_HoldTime = 3.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Break")
+	float Break_NoiseRadius = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Break")
+	float Break_NoiseLifetime = 2.5f;
 
 	// debug functions
 	void UpdateIlluminanceCache();
@@ -172,6 +195,22 @@ protected:
 	static constexpr float TrailCheckInterval = 0.1f;
 
 	void UpdateTrail();
+
+	UPROPERTY()
+	TArray<TObjectPtr<APointLight>> BreakableLights;
+
+	TWeakObjectPtr<APointLight> BreakTarget;
+	FTimerHandle BreakTimer;
+	FTimerHandle BreakPromptTimer;
+
+	static constexpr float BreakPromptInterval = 0.1f;
+
+	void OnInteractStart();
+	void OnInteractEnd();
+	void OnBreakTimer();
+	void UpdateBreakPrompt();
+	APointLight* FindBreakableLight() const;
+	void BreakLight(APointLight* Light);
 
 protected:
 

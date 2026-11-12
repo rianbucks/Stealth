@@ -551,3 +551,15 @@ void AEnemyAIController::ApplyRotationMode()
 		Body->SetFaceController(bFacingPlayer || bLookingAround);
 	}
 }
+
+void AEnemyAIController::NoticeLightOut(const FVector& LightLocation)
+{
+	const AEnemySearcher* Searcher = Cast<AEnemySearcher>(GetPawn());
+	if (!Searcher || !Searcher->bLightOut_Notices || bChasing) { return; }
+	if (!CanSeeLocation(LightLocation, Searcher->LightNotice_HalfAngle)) { return; }
+
+	NoticedLocation = FVector(LightLocation.X, LightLocation.Y, Searcher->GetActorLocation().Z);
+	Alert = FMath::Max(Alert, Searcher->Alert_SuspicionLevel);
+	UE_LOG(LogTemp, Warning, TEXT("%s: LIGHT OUT SEEN"), *Searcher->GetActorNameOrLabel());
+	RefreshWatch();
+}

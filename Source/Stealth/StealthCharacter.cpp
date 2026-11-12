@@ -16,6 +16,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "EngineUtils.h"
+#include "Engine/PointLight.h"
+#include "EnemyAIController.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -131,6 +134,21 @@ void AStealthCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		{
 			UE_LOG(LogTemp, Warning, TEXT("IA_Flashlight is not assigned in BP"));
 		}
+
+		if (IA_Interact)
+		{
+			EnhancedInputComponent->BindAction(
+				IA_Interact, ETriggerEvent::Started,
+				this, &AStealthCharacter::OnInteractStart);
+
+			EnhancedInputComponent->BindAction(
+				IA_Interact, ETriggerEvent::Completed,
+				this, &AStealthCharacter::OnInteractEnd);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("IA_Interact is not assigned in BP"));
+		}
 	}
 	else
 	{
@@ -201,6 +219,18 @@ void AStealthCharacter::BeginPlay()
 	SetStance(EMovementStance::Sprint);
 	SetStance(EMovementStance::Walk);
 	SetStance(EMovementStance::Walk);
+
+	for (TActorIterator<APointLight> It(GetWorld()); It; ++It)
+	{
+		if (It->ActorHasTag(Break_Tag))
+		{
+			BreakableLights.Add(*It);
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("BREAKABLE LIGHTS: %d"), BreakableLights.Num());
+
+	GetWorldTimerManager().SetTimer(BreakPromptTimer, this,
+		&AStealthCharacter::UpdateBreakPrompt, BreakPromptInterval, true);
 }
 
 void AStealthCharacter::ApplyStanceSpeed()
@@ -253,14 +283,32 @@ void AStealthCharacter::OnCrouchToggle()
 
 void AStealthCharacter::OnSprintStart()
 {
+	bSprintHeld = true;
+
+	if (IsFlashlightOn())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SPRINT BLOCKED (flashlight)"));
+		return;
+	}
+
 	SetStance(EMovementStance::Sprint);
 }
 
 void AStealthCharacter::OnSprintEnd()
 {
+	bSprintHeld = false;
+
 	if (CurrentStance == EMovementStance::Sprint)
 	{
 		SetStance(EMovementStance::Walk);
+	}
+}
+
+void AStealthCharacter::ResumeSprintIfHeld()
+{
+	if (bSprintHeld && CurrentStance == EMovementStance::Walk && !IsFlashlightOn())
+	{
+		SetStance(EMovementStance::Sprint);
 	}
 }
 
@@ -300,6 +348,11 @@ void AStealthCharacter::OnFlashlightStart()
 	Flashlight->SetVisibility(true);
 	SetAimMode(true);
 
+	if (CurrentStance == EMovementStance::Sprint)
+	{
+		SetStance(EMovementStance::Walk);
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("Flashlight -> ON (battery %.1f)"), Battery);
 }
 
@@ -314,6 +367,8 @@ void AStealthCharacter::OnFlashlightEnd()
 	SetAimMode(false);
 
 	UE_LOG(LogTemp, Warning, TEXT("Flashlight -> OFF (battery %.1f)"), Battery);
+
+	ResumeSprintIfHeld();
 }
 
 void AStealthCharacter::UpdateBattery()
@@ -349,6 +404,7 @@ void AStealthCharacter::UpdateBattery()
 			SetAimMode(false);
 
 			UE_LOG(LogTemp, Warning, TEXT("Flashlight -> OFF (depleted)"));
+			ResumeSprintIfHeld();
 		}
 	}
 }
@@ -467,5 +523,102 @@ void AStealthCharacter::ApplyEnemyHit(AActor* Attacker)
 		{
 			GameMode->ReportPlayerCaught();
 		}
+	}
+}
+
+APointLight* AStealthCharacter::FindBreakableLight() const
+{
+	APointLight* Best = nullptr;
+	float BestDistance = Break_Range;
+
+	for (APointLight* Light : BreakableLights)
+	{
+		if (!IsValid(Light)) { continue; }
+
+		const float Distance = FVector::Dist2D(Light->GetActorLocation(), GetActorLocation());
+		if (Distance <= BestDistance)
+		{
+			Best = Light;
+			BestDistance = Distance;
+		}
+	}
+	return Best;
+}
+
+void AStealthCharacter::OnInteractStart()
+{
+	APointLight* Light = FindBreakableLight();
+	if (!Light) { return; }
+
+	if (Break_HoldTime <= 0.f)
+	{
+		BreakLight(Light);
+		return;
+	}
+
+	BreakTarget = Light;
+	GetWorldTimerManager().SetTimer(BreakTimer, this, &AStealthCharacter::OnBreakTimer, Break_HoldTime, false);
+	UE_LOG(LogTemp, Warning, TEXT("BREAKING %s (%.1fs)"), *Light->GetActorNameOrLabel(), Break_HoldTime);
+}
+
+void AStealthCharacter::OnInteractEnd()
+{
+	if (GetWorldTimerManager().IsTimerActive(BreakTimer))
+	{
+		GetWorldTimerManager().ClearTimer(BreakTimer);
+		UE_LOG(LogTemp, Warning, TEXT("BREAK CANCELED"));
+	}
+	BreakTarget = nullptr;
+}
+
+void AStealthCharacter::OnBreakTimer()
+{
+	APointLight* Light = BreakTarget.Get();
+	BreakTarget = nullptr;
+
+	if (Light && Light == FindBreakableLight())
+	{
+		BreakLight(Light);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BREAK CANCELED (out of range)"));
+	}
+}
+
+void AStealthCharacter::BreakLight(APointLight* Light)
+{
+	const FVector LightLocation = Light->GetActorLocation();
+	UE_LOG(LogTemp, Warning, TEXT("LIGHT BROKEN: %s"), *Light->GetActorNameOrLabel());
+	Light->Destroy();
+
+	if (Break_NoiseRadius > 0.f)
+	{
+		if (UTraceSubsystem* Traces = GetWorld()->GetSubsystem<UTraceSubsystem>())
+		{
+			const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			const FVector Foot = GetActorLocation() - FVector(0.f, 0.f, HalfHeight - 5.f);
+			Traces->SpawnNoise(this, Foot, Break_NoiseRadius, Break_NoiseLifetime, bShowTraceDebug);
+		}
+	}
+
+	for (TActorIterator<AEnemyAIController> It(GetWorld()); It; ++It)
+	{
+		It->NoticeLightOut(LightLocation);
+	}
+}
+
+void AStealthCharacter::UpdateBreakPrompt()
+{
+	if (!GEngine) { return; }
+
+	if (GetWorldTimerManager().IsTimerActive(BreakTimer))
+	{
+		GEngine->AddOnScreenDebugMessage(2, BreakPromptInterval * 2.f, FColor::Cyan,
+			FString::Printf(TEXT("Breaking... %.1fs"), GetWorldTimerManager().GetTimerRemaining(BreakTimer)));
+	}
+	else if (FindBreakableLight())
+	{
+		GEngine->AddOnScreenDebugMessage(2, BreakPromptInterval * 2.f, FColor::Cyan, TEXT("[E] Break light"));
 	}
 }

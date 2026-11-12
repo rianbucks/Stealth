@@ -146,4 +146,7 @@ public:
 	bool bSight_OffLimitsLightAndTraces = false;
 
 	void SetFaceController(bool bFace);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Perception")
+	bool bLightOut_Notices = true;
 };

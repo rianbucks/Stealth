@@ -125,4 +125,6 @@ class STEALTH_API AEnemyAIController : public AAIController
 
 		void SetLookAround(bool bLook);
 		void LookToward(float Yaw);
+
+		void NoticeLightOut(const FVector& LightLocation);
 };
